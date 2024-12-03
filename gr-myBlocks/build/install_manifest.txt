@@ -1,0 +1,9 @@
+/usr/local/lib/cmake/myBlocks/myBlocksConfig.cmake
+/usr/local/include/myBlocks/api.h
+/usr/local/lib/python3.9/site-packages/myBlocks/__init__.py
+/usr/local/lib/python3.9/site-packages/myBlocks/packet_length_Extractor.py
+/usr/local/lib/python3.9/site-packages/myBlocks/__init__.pyc
+/usr/local/lib/python3.9/site-packages/myBlocks/packet_length_Extractor.pyc
+/usr/local/lib/python3.9/site-packages/myBlocks/__init__.pyo
+/usr/local/lib/python3.9/site-packages/myBlocks/packet_length_Extractor.pyo
+/usr/local/share/gnuradio/grc/blocks/myBlocks_packet_length_Extractor.block.yml
