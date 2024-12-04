@@ -2,7 +2,7 @@ import struct
 import numpy as np
 from gnuradio import gr
 
-from message.msg_protocol import Header
+from message.header import Header
 
 class packet_length_Extractor(gr.sync_block):
     def __init__(self, message_size):
