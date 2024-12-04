@@ -1,6 +1,0 @@
-	21:35:11.411: Initializing logger for zmq_sink
-	21:35:11.415: Connected to port 49201
-	21:35:11.415: Subscribed to all message types
-	21:35:11.415: Listening for messages
-	21:35:11.415: Starting receiver loop
-	21:35:15.139: Closing logger
