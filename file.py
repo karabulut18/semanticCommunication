@@ -1,7 +1,7 @@
-import util.file_utl as file_utl
-from message.fileContent import FileContent
-from message.types import FILE_BUFFER_SIZE
-from util.logger import log, loge
+import file_utl as file_utl
+from fileContent import FileContent
+from header import FILE_BUFFER_SIZE
+from logger import log, loge
 
 class File(object):
     def __init__(self, file_name, file_path, id):

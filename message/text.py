@@ -1,7 +1,5 @@
-from header import Header
-from types import msg_type
+from header import Header, msg_type
 from util.logger import log
-
 
 class textMessage:
     def __init__(self, text):

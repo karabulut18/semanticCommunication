@@ -6,8 +6,8 @@ import zmq
 import argparse
 import sys
 from file_transfer_unit import File_Transfer_Unit
-from util.logger import log, loge, initialize_logger
-from message.text import textMessage
+from logger import log, loge, initialize_logger
+from text import textMessage
 
 connection_protocol = 'tcp://'
 connection_address = '*:'
@@ -42,7 +42,8 @@ class connection(object):
     def send(self, message):
         serialized_message = message.serialize()
         try:
-            self.socket.send(serialized_message)
+            self.socket.send(serialized_message )
+            log(f"     Message: {serialized_message}")
             self.message_count += 1
             #log(f"Sent message of size {len(serialized_message)} message count {self.message_count}")
         except Exception as e:

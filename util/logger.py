@@ -22,7 +22,9 @@ class Logger(logging.Logger):
 
         # open file for logging with timestamp format: yy_MM_dd-HH_mm
         timestamp   = time.strftime("%y_%m_%d_%H_%M")
-        log_dir     = file_utl.get_script_dir()
+        # get caller script directory
+        #
+        log_dir     = file_utl.get_parent_dir(file_utl.get_script_dir())
         log_dir     = log_dir +  '/logs/' + appName
         if not file_utl.file_exists(log_dir):
             file_utl.create_dir(log_dir)

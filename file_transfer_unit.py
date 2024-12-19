@@ -1,9 +1,9 @@
-import util.file_utl as file_utl
+import file_utl as file_utl
 from file import File
 from time import sleep
-from util.logger import log, loge
-from message.fileMetaData import FileMetaData
-from message.fileContent import FileContent
+from logger import log, loge
+from fileMetaData import FileMetaData
+from fileContent import FileContent
 
 class File_Transfer_Unit(object):
     def __init__(self, file_directory):

@@ -5,12 +5,12 @@ import zmq
 import argparse
 import sys
 from file_transfer_unit import File_Transfer_Unit
-from util.logger import log, loge, initialize_logger
-from message.types import msg_type
-from message.header import Header
-from message.text import textMessage
-from message.fileMetaData import FileMetaData
-from message.fileContent import FileContent
+from logger import log, loge, initialize_logger
+from header import Header, msg_type
+from text import textMessage
+from fileContent import FileContent
+from fileMetaData import FileMetaData
+
 
 connection_protocol = 'tcp://'
 connection_address  = 'localhost:'
@@ -47,33 +47,33 @@ class connection(object):
         self.fileTransferUnit = fileTransferUnit
 
     def recv(self):
-        data = self.socket.recv()
-        #log(f"      Received message of size {len(data)}")
-        data = self.left_over + data
-        self.left_over = b''
-        while len(data) > Header.get_size():
-            header = Header.deserialize(data[:Header.get_size()])
-            if header.msg_type > msg_type.MSGTYPE_MAX.value or header.msg_type < 1:
-                loge(f"Invalid message type {header.msg_type}, message size {len(data)}")
-                loge(f"     Message: {data}")
-                break
-            if header.size > len(data):
-                self.left_over = data
-                log(f"Left over data size {len(self.left_over)} message size {header.size}")
-                break
-            message = data[:header.size]
-            data = data[header.size:]
-            #log(f"Received message of type {header.msg_type} and size {header.size}")
-            if header.msg_type == msg_type.MSGTYPE_TEXT.value:
-                self.HandleTextMessage(textMessage.deserialize(message))
-            elif header.msg_type == msg_type.MSGTYPE_FILE_METADATA.value:
-                self.fileTransferUnit.HandleFileMetaDataMessage(FileMetaData.deserialize(message))
-            elif header.msg_type == msg_type.MSGTYPE_FILE_CONTENT.value:
-                self.fileTransferUnit.HandleFileContentMessage(FileContent.deserialize(message))
+        left_over = b''
+        while True:
+            data = self.socket.recv()
+            log(f"received size {len(data)}- data: {data}") 
+            continue
+            data = left_over + data
+            if len(data) < Header.get_CAC_size():
+                left_over = data    
+            elif len(data) < Header.get_size():
+                left_over = data
             else:
-                loge(f"Unknown message type {header.msg_type}")
-                loge(f"     Message: {message}")
+                left_over = self.ParseMessage(data)
 
+    def ParseMessage(self, data):
+        header = Header.deserialize(data[:Header.get_size()])
+        message = data[:header.size]
+        #log(f"Received message of type {header.msg_type} and size {header.size}")
+        if header.msg_type == msg_type.MSGTYPE_TEXT.value:
+            self.HandleTextMessage(textMessage.deserialize(message))
+        elif header.msg_type == msg_type.MSGTYPE_FILE_METADATA.value:
+            self.fileTransferUnit.HandleFileMetaDataMessage(FileMetaData.deserialize(message))
+        elif header.msg_type == msg_type.MSGTYPE_FILE_CONTENT.value:
+            self.fileTransferUnit.HandleFileContentMessage(FileContent.deserialize(message))
+        else:
+            loge(f"Unknown message type {header.msg_type}")
+            loge(f"     Message: {message}")
+        return data[header.size:]
     def HandleTextMessage(self, message):
         log("Received text message")
         message.print_text()

@@ -1,7 +1,6 @@
 import struct
-from header import Header
+from header import Header, msg_type, FILE_BUFFER_SIZE
 from util.logger import log, loge
-from types import msg_type, FILE_BUFFER_SIZE
 
 
 class FileContent:

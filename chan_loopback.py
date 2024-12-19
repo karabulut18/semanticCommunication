@@ -17,6 +17,8 @@ from PyQt5.QtCore import QObject, pyqtSlot
 from gnuradio import blocks
 from gnuradio import channels
 from gnuradio.filter import firdes
+from gnuradio import custom
+from gnuradio import digital
 from gnuradio import gr
 from gnuradio.fft import window
 import sys
@@ -66,10 +68,13 @@ class chan_loopback(gr.top_block, Qt.QWidget):
         ##################################################
         # Variables
         ##################################################
+        self.access_key = access_key = '11100001010110101110100010010011'
         self.time_offset = time_offset = 1.000
+        self.thresh = thresh = 1
         self.taps = taps = [1.0 + 0.0j, ]
         self.samp_rate = samp_rate = 768000
         self.noise_volt = noise_volt = 0.0
+        self.hdr_format = hdr_format = digital.header_format_default(access_key, 0)
         self.freq_offset = freq_offset = 0
 
         ##################################################
@@ -103,6 +108,12 @@ class chan_loopback(gr.top_block, Qt.QWidget):
         self.top_layout.addWidget(self._freq_offset_win)
         self.zeromq_sub_source_0 = zeromq.sub_source(gr.sizeof_char, 1, 'tcp://127.0.0.1:49203', 100, False, (-1), '', False)
         self.zeromq_pub_sink_0 = zeromq.pub_sink(gr.sizeof_char, 1, 'tcp://127.0.0.1:49201', 100, False, (-1), '', True, True)
+        self.digital_protocol_formatter_bb_0 = digital.protocol_formatter_bb(hdr_format, "packet_len")
+        self.digital_crc32_bb_0_0_0 = digital.crc32_bb(True, "packet_len", True)
+        self.digital_crc32_bb_0 = digital.crc32_bb(False, "packet_len", True)
+        self.digital_correlate_access_code_xx_ts_0 = digital.correlate_access_code_bb_ts("11100001010110101110100010010011",
+          thresh, 'packet_len')
+        self.custom_tag_with_packet_len_0 = custom.tag_with_packet_len()
         self.channels_channel_model_0 = channels.channel_model(
             noise_voltage=noise_volt,
             frequency_offset=freq_offset,
@@ -112,6 +123,8 @@ class chan_loopback(gr.top_block, Qt.QWidget):
             block_tags=True)
         self.blocks_uchar_to_float_0 = blocks.uchar_to_float()
         self.blocks_throttle2_0 = blocks.throttle( gr.sizeof_gr_complex*1, samp_rate, True, 0 if "auto" == "auto" else max( int(float(0.1) * samp_rate) if "auto" == "time" else int(0.1), 1) )
+        self.blocks_tagged_stream_mux_0 = blocks.tagged_stream_mux(gr.sizeof_char*1, 'packet_len', 0)
+        self.blocks_repack_bits_bb_1_0 = blocks.repack_bits_bb(1, 8, "packet_len", False, gr.GR_MSB_FIRST)
         self.blocks_null_source_0 = blocks.null_source(gr.sizeof_float*1)
         self.blocks_null_sink_0 = blocks.null_sink(gr.sizeof_float*1)
         self.blocks_float_to_uchar_0 = blocks.float_to_uchar(1, 1, 0)
@@ -125,12 +138,20 @@ class chan_loopback(gr.top_block, Qt.QWidget):
         self.connect((self.blocks_complex_to_float_0, 0), (self.blocks_float_to_uchar_0, 0))
         self.connect((self.blocks_complex_to_float_0, 1), (self.blocks_null_sink_0, 0))
         self.connect((self.blocks_float_to_complex_0, 0), (self.channels_channel_model_0, 0))
-        self.connect((self.blocks_float_to_uchar_0, 0), (self.zeromq_pub_sink_0, 0))
+        self.connect((self.blocks_float_to_uchar_0, 0), (self.digital_correlate_access_code_xx_ts_0, 0))
         self.connect((self.blocks_null_source_0, 0), (self.blocks_float_to_complex_0, 1))
+        self.connect((self.blocks_repack_bits_bb_1_0, 0), (self.digital_crc32_bb_0_0_0, 0))
+        self.connect((self.blocks_tagged_stream_mux_0, 0), (self.blocks_uchar_to_float_0, 0))
         self.connect((self.blocks_throttle2_0, 0), (self.blocks_complex_to_float_0, 0))
         self.connect((self.blocks_uchar_to_float_0, 0), (self.blocks_float_to_complex_0, 0))
         self.connect((self.channels_channel_model_0, 0), (self.blocks_throttle2_0, 0))
-        self.connect((self.zeromq_sub_source_0, 0), (self.blocks_uchar_to_float_0, 0))
+        self.connect((self.custom_tag_with_packet_len_0, 0), (self.digital_crc32_bb_0, 0))
+        self.connect((self.digital_correlate_access_code_xx_ts_0, 0), (self.blocks_repack_bits_bb_1_0, 0))
+        self.connect((self.digital_crc32_bb_0, 0), (self.blocks_tagged_stream_mux_0, 1))
+        self.connect((self.digital_crc32_bb_0, 0), (self.digital_protocol_formatter_bb_0, 0))
+        self.connect((self.digital_crc32_bb_0_0_0, 0), (self.zeromq_pub_sink_0, 0))
+        self.connect((self.digital_protocol_formatter_bb_0, 0), (self.blocks_tagged_stream_mux_0, 0))
+        self.connect((self.zeromq_sub_source_0, 0), (self.custom_tag_with_packet_len_0, 0))
 
 
     def closeEvent(self, event):
@@ -141,12 +162,25 @@ class chan_loopback(gr.top_block, Qt.QWidget):
 
         event.accept()
 
+    def get_access_key(self):
+        return self.access_key
+
+    def set_access_key(self, access_key):
+        self.access_key = access_key
+        self.set_hdr_format(digital.header_format_default(self.access_key, 0))
+
     def get_time_offset(self):
         return self.time_offset
 
     def set_time_offset(self, time_offset):
         self.time_offset = time_offset
         self.channels_channel_model_0.set_timing_offset(self.time_offset)
+
+    def get_thresh(self):
+        return self.thresh
+
+    def set_thresh(self, thresh):
+        self.thresh = thresh
 
     def get_taps(self):
         return self.taps
@@ -169,6 +203,13 @@ class chan_loopback(gr.top_block, Qt.QWidget):
     def set_noise_volt(self, noise_volt):
         self.noise_volt = noise_volt
         self.channels_channel_model_0.set_noise_voltage(self.noise_volt)
+
+    def get_hdr_format(self):
+        return self.hdr_format
+
+    def set_hdr_format(self, hdr_format):
+        self.hdr_format = hdr_format
+        self.digital_protocol_formatter_bb_0.set_header_format(self.hdr_format)
 
     def get_freq_offset(self):
         return self.freq_offset
