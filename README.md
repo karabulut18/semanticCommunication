@@ -16,7 +16,7 @@ if you cannot run gnuradio-compaion, try add to your localip to allowed xhosts
 
 ifconfig en0 | grep inet
 
-xhost + <localip>
+xhost + <_localip>
 
 I chnaged docker container command as:
 
