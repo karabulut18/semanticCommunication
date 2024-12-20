@@ -26,7 +26,7 @@ I chnaged docker container command as:
  -e DISPLAY=host.docker.internal:0 \
  -v /tmp/.X11-unix:/tmp/.X11-unix \
  --volume="$HOME/.Xauthority:/root/.Xauthority:rw" \
- --volume /Users/saka/Desktop/SC/workspace:/home/gnuradio/persistent \
+ --volume <source_dir>:/home/gnuradio/persistent \
  --device /dev/snd \
  --device /dev/dri \
  --volume /dev/bus/usb:/dev/bus/usb \
