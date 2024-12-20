@@ -32,4 +32,4 @@ I chnaged docker container command as:
  --volume /dev/bus/usb:/dev/bus/usb \
  --privileged \
  --group-add=audio \
- gnuradio:3.10
+ <container tag>
