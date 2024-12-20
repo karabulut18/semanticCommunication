@@ -32,4 +32,4 @@ I chnaged docker container command as:
  --volume /dev/bus/usb:/dev/bus/usb \
  --privileged \
  --group-add=audio \
- <container tag>
+ <_container tag>
