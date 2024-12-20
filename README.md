@@ -11,3 +11,25 @@ https://gist.github.com/roaldnefs/fe9f36b0e8cf2890af14572c083b516c
 
 docker setup
 https://github.com/git-artes/docker-gnuradio
+
+if you cannot run gnuradio-compaion, try add to your localip to allowed xhosts
+
+ifconfig en0 | grep inet
+
+xhost +<localip>
+
+I chnaged docker container command as:
+
+ docker run -dit \
+ --name gnuradio-container \
+ --net=host \
+ -e DISPLAY=host.docker.internal:0 \
+ -v /tmp/.X11-unix:/tmp/.X11-unix \
+ --volume="$HOME/.Xauthority:/root/.Xauthority:rw" \
+ --volume /Users/saka/Desktop/SC/workspace:/home/gnuradio/persistent \
+ --device /dev/snd \
+ --device /dev/dri \
+ --volume /dev/bus/usb:/dev/bus/usb \
+ --privileged \
+ --group-add=audio \
+ gnuradio:3.10
