@@ -1,7 +1,7 @@
 import file_utl as file_utl
 from file import File
 from time import sleep
-from logger import log, loge
+from logger import LOG, LOGE
 from fileMetaData import FileMetaData
 from fileContent import FileContent
 
@@ -28,7 +28,7 @@ class File_Transfer_Unit(object):
             fileObejct = File(file, file_path, self.fileTransferIndex)
             fileSize = file_utl.get_file_size(file_path)
             fileObejct.setFileSize(fileSize)
-            log(f"File {file} found with size {fileSize}")
+            LOG(f"File {file} found with size {fileSize}")
             self.files[self.fileTransferIndex] = fileObejct
             self.fileTransferIndex += 1
 
@@ -36,8 +36,8 @@ class File_Transfer_Unit(object):
         file = self.files[file_id]
         fileMetaData = FileMetaData(file.file_name, file.size, file.id)
         self.connection.send(fileMetaData)
-        log(f"File meta data sent for file id {file.id}, file name {file.file_name}, file size {file.size}")
-        log(f"message size {fileMetaData.get_size()}")
+        LOG(f"File meta data sent for file id {file.id}, file name {file.file_name}, file size {file.size}")
+        LOG(f"message size {fileMetaData.get_size()}")
 
     def sendMetaDataOfAllFiles(self):
         for file_id in self.files:
@@ -60,7 +60,7 @@ class File_Transfer_Unit(object):
         file_path = file_utl.expand_path(file_path)
         self.files[message.file_id] = File(file_name, file_path, message.file_id)
         self.files[message.file_id].createFile()
-        log(f"File meta data received for file id {message.file_id}, file name {file_name}, file path {file_path}, file size {message.file_size}")
+        LOG(f"File meta data received for file id {message.file_id}, file name {file_name}, file path {file_path}, file size {message.file_size}")
         self.files[message.file_id].setFileSize(message.file_size)
 
     def HandleFileContentMessage(self, message):
@@ -69,7 +69,7 @@ class File_Transfer_Unit(object):
             file = self.files[message.file_id]
             #log(f"File id {message.file_id} received content of size {len(message.content_buffer)}, message id {message.msg_id}")
         except Exception as e:
-            loge(f"Error handling file content message {e}, file id {message.file_id}")
+            LOGE(f"Error handling file content message {e}, file id {message.file_id}")
             return
         file.writeContentToFile(message.content_buffer, message.file_index)
 
@@ -82,7 +82,7 @@ class File_Transfer_Unit(object):
             count += 1
             sleep(0.01)
             if file.file_index >= file.size:
-                log(f"File id {file_id} sent in {count} iterations with size {file.size} and file index {file.file_index} and file name {file.file_name}")
+                LOG(f"File id {file_id} sent in {count} iterations with size {file.size} and file index {file.file_index} and file name {file.file_name}")
                 break
 
     def sendAllFiles(self):
@@ -91,4 +91,4 @@ class File_Transfer_Unit(object):
         for file_id in self.files:
             self.sendFileContent(file_id)
             sleep(0.1)
-        log("All files sent")
+        LOG("All files sent")

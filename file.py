@@ -1,7 +1,7 @@
 import file_utl as file_utl
 from fileContent import FileContent
 from header import FILE_BUFFER_SIZE
-from logger import log, loge
+from logger import LOG, LOGE
 
 class File(object):
     def __init__(self, file_name, file_path, id):
@@ -32,10 +32,10 @@ class File(object):
         #log(f"Writing content to file {self.file_name} with start index {self.file_index}")
         #log(f"Content size {len(content)}")
         if(file_index > self.size):
-            loge(f"File {self.file_name} index out of bounds")
+            LOGE(f"File {self.file_name} index out of bounds")
             return
         file_utl.write_to_file_with_start_index(self.file_path, content, file_index)
         self.file_index += len(content)
         if self.file_index >= self.size:
-            log(f"File {self.file_name} transfer complete")
+            LOG(f"File {self.file_name} transfer complete")
             self.file_index = 0

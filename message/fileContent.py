@@ -1,6 +1,6 @@
 import struct
 from header import Header, msg_type, FILE_BUFFER_SIZE
-from util.logger import log, loge
+from util.logger import LOG, LOGE
 
 
 class FileContent:
@@ -48,10 +48,10 @@ class FileContent:
         offset              += struct.calcsize('!Q')
 
         if(content_buffer_size < 0):
-            loge(f"Invalid content buffer size {content_buffer_size}")
+            LOGE(f"Invalid content buffer size {content_buffer_size}")
             return None
         elif(content_buffer_size > FILE_BUFFER_SIZE):
-            loge(f"Content buffer size {content_buffer_size} exceeds limit {FILE_BUFFER_SIZE}")
+            LOGE(f"Content buffer size {content_buffer_size} exceeds limit {FILE_BUFFER_SIZE}")
             content_buffer_size = FILE_BUFFER_SIZE
 
         content_buffer = data[offset:offset + content_buffer_size]

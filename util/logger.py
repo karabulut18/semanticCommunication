@@ -6,7 +6,6 @@ import atexit
 
 class Logger(logging.Logger):
     _instance = None
-
     def __new__(cls, appName, *args, **kwargs):
         if not cls._instance:
             cls._instance = super().__new__(cls)
@@ -75,14 +74,14 @@ def initialize_logger(appName):
     return Logger(appName)
 
 # Global logging functions
-def log(message):
+def LOG(message):
     logger = Logger._instance
     if logger:
         logger.log(message)
     else:
         raise RuntimeError("Logger not initialized")
 
-def loge(message):
+def LOGE(message):
     logger = Logger._instance
     if logger:
         logger.loge(message)

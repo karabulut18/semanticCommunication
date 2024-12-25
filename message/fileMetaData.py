@@ -1,6 +1,6 @@
 import struct
 from header import Header, msg_type, NAME_BUFFER_SIZE
-from logger import log, loge
+from logger import LOGE
 
 
 class FileMetaData:
@@ -35,10 +35,10 @@ class FileMetaData:
         offset              += struct.calcsize('!Q')
 
         if(file_name_size < 0):
-            loge(f"Invalid file name size {file_name_size}")
+            LOGE(f"Invalid file name size {file_name_size}")
             return None
         elif(file_name_size > NAME_BUFFER_SIZE):
-            loge(f"File name size {file_name_size} exceeds limit {NAME_BUFFER_SIZE}")
+            LOGE(f"File name size {file_name_size} exceeds limit {NAME_BUFFER_SIZE}")
             file_name_size = NAME_BUFFER_SIZE
 
         file_name           = data[offset:offset + file_name_size].decode('utf-8')

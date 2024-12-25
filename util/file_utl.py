@@ -16,6 +16,8 @@ def get_file_name(file_path):
     return os.path.basename(file_path)
 
 def create_symbolic_link(src, dst):
+    if os.path.islink(dst):
+        os.unlink(dst)  # Remove the existing symbolic link
     os.symlink(src, dst)
 
 def get_script_dir():

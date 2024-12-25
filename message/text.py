@@ -1,5 +1,5 @@
 from header import Header, msg_type
-from util.logger import log
+from logger import LOG
 
 class textMessage:
     def __init__(self, text):
@@ -14,7 +14,7 @@ class textMessage:
         return self.header.serialize() + self.text.encode('utf-8')
     
     def print_text(self):
-        log(self.text)
+        LOG(self.text)
 
     @staticmethod
     def deserialize(data):

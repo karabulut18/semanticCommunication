@@ -1,4 +1,4 @@
-#!/Users/saka/radioconda/envs/gnuradio/bin/python3
+#!/usr/bin/python3
 
 import signal
 import time
@@ -6,8 +6,10 @@ import zmq
 import argparse
 import sys
 from file_transfer_unit import File_Transfer_Unit
-from logger import log, loge, initialize_logger
+from logger import LOG, LOGE, initialize_logger
 from text import textMessage
+from header import PadData
+
 
 connection_protocol = 'tcp://'
 connection_address = '*:'
@@ -31,29 +33,30 @@ class connection(object):
         try:
             self.socket.bind(connection_string + str(self.port))
         except Exception as e:
-            loge(f"Error connecting to port {self.port} {e}")
+            LOGE(f"Error connecting to port {self.port} {e}")
             exit()
-        log(f"Connected to port {self.port}")
+        LOG(f"Connected to port {self.port}")
         self.message_count = 0
 
     def SetFileTransferUnit(self, fileTransferUnit):
         self.FileTransferUnit = fileTransferUnit
 
     def send(self, message):
-        serialized_message = message.serialize()
+        serialized_message  = message.serialize()
+        padded_message      = PadData(serialized_message)
         try:
-            self.socket.send(serialized_message )
-            log(f"     Message: {serialized_message}")
+            self.socket.send(padded_message)
+            LOG(f"     Message: {padded_message}")
             self.message_count += 1
             #log(f"Sent message of size {len(serialized_message)} message count {self.message_count}")
         except Exception as e:
-            loge(f"Error sending message: {e}")
+            LOGE(f"Error sending message: {e}")
 
     def sendStraight(self, message):
         try:
             self.socket.send(message)
         except Exception as e:
-            loge(f"Error sending message: {e}")
+            LOGE(f"Error sending message: {e}")
 
     def __del__(self):
         self.socket.close()
@@ -63,7 +66,7 @@ class connection(object):
         count = 0
         while True:
             heartbeat = textMessage('Heartbeat ' + str(count))
-            log(f"Sending heartbeat {count}, size {heartbeat.get_size()}")
+            LOG(f"Sending heartbeat {count}, size {heartbeat.get_size()}")
             count += 1
             self.send(heartbeat)
             time.sleep(1)

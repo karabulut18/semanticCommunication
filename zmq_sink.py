@@ -1,11 +1,11 @@
-#!/Users/saka/radioconda/envs/gnuradio/bin/python3
+#!/usr/bin/python3
 
 import signal
 import zmq
 import argparse
 import sys
 from file_transfer_unit import File_Transfer_Unit
-from logger import log, loge, initialize_logger
+from logger import LOG, LOGE, initialize_logger
 from header import Header, msg_type
 from text import textMessage
 from fileContent import FileContent
@@ -36,11 +36,11 @@ class connection(object):
             #self.socket.connect('tcp://127.0.0.1:' + str(self.port))
             self.socket.connect(connection_string + str(self.port))
         except Exception as e:
-            loge(f"Error connecting to port {self.port} {e}")
+            LOGE(f"Error connecting to port {self.port} {e}")
             exit()
-        log(f"Connected to port {self.port}")
-        log(f"Subscribed to all message types")
-        log(f"Listening for messages")
+        LOG(f"Connected to port {self.port}")
+        LOG(f"Subscribed to all message types")
+        LOG(f"Listening for messages")
         self.left_over = b''
 
     def setFileTransferUnit(self, fileTransferUnit):
@@ -50,15 +50,8 @@ class connection(object):
         left_over = b''
         while True:
             data = self.socket.recv()
-            log(f"received size {len(data)}- data: {data}") 
-            continue
-            data = left_over + data
-            if len(data) < Header.get_CAC_size():
-                left_over = data    
-            elif len(data) < Header.get_size():
-                left_over = data
-            else:
-                left_over = self.ParseMessage(data)
+            LOG(f"received size {len(data)}- data: {data}") 
+            self.ParseMessage(data)
 
     def ParseMessage(self, data):
         header = Header.deserialize(data[:Header.get_size()])
@@ -71,15 +64,15 @@ class connection(object):
         elif header.msg_type == msg_type.MSGTYPE_FILE_CONTENT.value:
             self.fileTransferUnit.HandleFileContentMessage(FileContent.deserialize(message))
         else:
-            loge(f"Unknown message type {header.msg_type}")
-            loge(f"     Message: {message}")
+            LOGE(f"Unknown message type {header.msg_type}")
+            LOGE(f"     Message: {message}")
         return data[header.size:]
     def HandleTextMessage(self, message):
-        log("Received text message")
+        LOG("Received text message")
         message.print_text()
 
     def recvLoop(self):
-        log("Starting receiver loop")
+        LOG("Starting receiver loop")
         self.message_count = 0
         while True:
             self.message_count += 1

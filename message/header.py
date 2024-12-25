@@ -3,7 +3,8 @@ from enum import Enum
 
 # Constants
 NAME_BUFFER_SIZE = 256
-FILE_BUFFER_SIZE = 1024
+FILE_BUFFER_SIZE = 512
+MAX_PACKET_SIZE  = 1024
 
 # Message Types
 class msg_type(Enum):
@@ -32,3 +33,7 @@ class Header:
     def deserialize(data):
         size, msg_type = struct.unpack('!QI', data)
         return Header(size, msg_type)
+
+
+def PadData(data, size = MAX_PACKET_SIZE):
+    return data + b'\0' * (size - len(data)) # Pad with null bytes

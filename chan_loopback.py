@@ -8,16 +8,16 @@
 # Title: chan_loopback
 # Author: Barry Duggan
 # Description: TX / RX loopback
-# GNU Radio version: 3.10.11.0
+# GNU Radio version: 3.10.7.0
 
+from packaging.version import Version as StrictVersion
 from PyQt5 import Qt
 from gnuradio import qtgui
-from PyQt5 import QtCore
 from PyQt5.QtCore import QObject, pyqtSlot
 from gnuradio import blocks
+from gnuradio import blocks, gr
 from gnuradio import channels
 from gnuradio.filter import firdes
-from gnuradio import custom
 from gnuradio import digital
 from gnuradio import gr
 from gnuradio.fft import window
@@ -27,8 +27,10 @@ from PyQt5 import Qt
 from argparse import ArgumentParser
 from gnuradio.eng_arg import eng_float, intx
 from gnuradio import eng_notation
+from gnuradio import gr, pdu
 from gnuradio import zeromq
-import threading
+from gnuradio.qtgui import Range, RangeWidget
+from PyQt5 import QtCore
 
 
 
@@ -55,15 +57,15 @@ class chan_loopback(gr.top_block, Qt.QWidget):
         self.top_grid_layout = Qt.QGridLayout()
         self.top_layout.addLayout(self.top_grid_layout)
 
-        self.settings = Qt.QSettings("gnuradio/flowgraphs", "chan_loopback")
+        self.settings = Qt.QSettings("GNU Radio", "chan_loopback")
 
         try:
-            geometry = self.settings.value("geometry")
-            if geometry:
-                self.restoreGeometry(geometry)
+            if StrictVersion(Qt.qVersion()) < StrictVersion("5.0.0"):
+                self.restoreGeometry(self.settings.value("geometry").toByteArray())
+            else:
+                self.restoreGeometry(self.settings.value("geometry"))
         except BaseException as exc:
             print(f"Qt GUI: Could not restore geometry: {str(exc)}", file=sys.stderr)
-        self.flowgraph_started = threading.Event()
 
         ##################################################
         # Variables
@@ -81,8 +83,8 @@ class chan_loopback(gr.top_block, Qt.QWidget):
         # Blocks
         ##################################################
 
-        self._time_offset_range = qtgui.Range(0.999, 1.001, 0.0001, 1.000, 200)
-        self._time_offset_win = qtgui.RangeWidget(self._time_offset_range, self.set_time_offset, "Timing Offset", "counter_slider", float, QtCore.Qt.Horizontal)
+        self._time_offset_range = Range(0.999, 1.001, 0.0001, 1.000, 200)
+        self._time_offset_win = RangeWidget(self._time_offset_range, self.set_time_offset, "Timing Offset", "counter_slider", float, QtCore.Qt.Horizontal)
         self.top_layout.addWidget(self._time_offset_win)
         # Create the options list
         self._samp_rate_options = [768000, 576000]
@@ -100,20 +102,20 @@ class chan_loopback(gr.top_block, Qt.QWidget):
             lambda i: self.set_samp_rate(self._samp_rate_options[i]))
         # Create the radio buttons
         self.top_layout.addWidget(self._samp_rate_tool_bar)
-        self._noise_volt_range = qtgui.Range(0, 1, 0.01, 0.0, 200)
-        self._noise_volt_win = qtgui.RangeWidget(self._noise_volt_range, self.set_noise_volt, "Noise Voltage", "counter_slider", float, QtCore.Qt.Horizontal)
+        self._noise_volt_range = Range(0, 1, 0.01, 0.0, 200)
+        self._noise_volt_win = RangeWidget(self._noise_volt_range, self.set_noise_volt, "Noise Voltage", "counter_slider", float, QtCore.Qt.Horizontal)
         self.top_layout.addWidget(self._noise_volt_win)
-        self._freq_offset_range = qtgui.Range(-0.1, 0.1, 0.001, 0, 200)
-        self._freq_offset_win = qtgui.RangeWidget(self._freq_offset_range, self.set_freq_offset, "Frequency Offset", "counter_slider", float, QtCore.Qt.Horizontal)
+        self._freq_offset_range = Range(-0.1, 0.1, 0.001, 0, 200)
+        self._freq_offset_win = RangeWidget(self._freq_offset_range, self.set_freq_offset, "Frequency Offset", "counter_slider", float, QtCore.Qt.Horizontal)
         self.top_layout.addWidget(self._freq_offset_win)
         self.zeromq_sub_source_0 = zeromq.sub_source(gr.sizeof_char, 1, 'tcp://127.0.0.1:49203', 100, False, (-1), '', False)
         self.zeromq_pub_sink_0 = zeromq.pub_sink(gr.sizeof_char, 1, 'tcp://127.0.0.1:49201', 100, False, (-1), '', True, True)
+        self.pdu_tagged_stream_to_pdu_0 = pdu.tagged_stream_to_pdu(gr.types.byte_t, 'packet_len')
         self.digital_protocol_formatter_bb_0 = digital.protocol_formatter_bb(hdr_format, "packet_len")
         self.digital_crc32_bb_0_0_0 = digital.crc32_bb(True, "packet_len", True)
         self.digital_crc32_bb_0 = digital.crc32_bb(False, "packet_len", True)
         self.digital_correlate_access_code_xx_ts_0 = digital.correlate_access_code_bb_ts("11100001010110101110100010010011",
           thresh, 'packet_len')
-        self.custom_tag_with_packet_len_0 = custom.tag_with_packet_len()
         self.channels_channel_model_0 = channels.channel_model(
             noise_voltage=noise_volt,
             frequency_offset=freq_offset,
@@ -124,10 +126,11 @@ class chan_loopback(gr.top_block, Qt.QWidget):
         self.blocks_uchar_to_float_0 = blocks.uchar_to_float()
         self.blocks_throttle2_0 = blocks.throttle( gr.sizeof_gr_complex*1, samp_rate, True, 0 if "auto" == "auto" else max( int(float(0.1) * samp_rate) if "auto" == "time" else int(0.1), 1) )
         self.blocks_tagged_stream_mux_0 = blocks.tagged_stream_mux(gr.sizeof_char*1, 'packet_len', 0)
-        self.blocks_repack_bits_bb_1_0 = blocks.repack_bits_bb(1, 8, "packet_len", False, gr.GR_MSB_FIRST)
+        self.blocks_stream_to_tagged_stream_0 = blocks.stream_to_tagged_stream(gr.sizeof_char, 1, 1024, "packet_len")
         self.blocks_null_source_0 = blocks.null_source(gr.sizeof_float*1)
         self.blocks_null_sink_0 = blocks.null_sink(gr.sizeof_float*1)
-        self.blocks_float_to_uchar_0 = blocks.float_to_uchar(1, 1, 0)
+        self.blocks_message_debug_0 = blocks.message_debug(True, gr.log_levels.info)
+        self.blocks_float_to_uchar_0 = blocks.float_to_uchar()
         self.blocks_float_to_complex_0 = blocks.float_to_complex(1)
         self.blocks_complex_to_float_0 = blocks.complex_to_float(1)
 
@@ -135,27 +138,28 @@ class chan_loopback(gr.top_block, Qt.QWidget):
         ##################################################
         # Connections
         ##################################################
+        self.msg_connect((self.pdu_tagged_stream_to_pdu_0, 'pdus'), (self.blocks_message_debug_0, 'log'))
         self.connect((self.blocks_complex_to_float_0, 0), (self.blocks_float_to_uchar_0, 0))
         self.connect((self.blocks_complex_to_float_0, 1), (self.blocks_null_sink_0, 0))
         self.connect((self.blocks_float_to_complex_0, 0), (self.channels_channel_model_0, 0))
         self.connect((self.blocks_float_to_uchar_0, 0), (self.digital_correlate_access_code_xx_ts_0, 0))
         self.connect((self.blocks_null_source_0, 0), (self.blocks_float_to_complex_0, 1))
-        self.connect((self.blocks_repack_bits_bb_1_0, 0), (self.digital_crc32_bb_0_0_0, 0))
+        self.connect((self.blocks_stream_to_tagged_stream_0, 0), (self.digital_crc32_bb_0, 0))
+        self.connect((self.blocks_stream_to_tagged_stream_0, 0), (self.pdu_tagged_stream_to_pdu_0, 0))
         self.connect((self.blocks_tagged_stream_mux_0, 0), (self.blocks_uchar_to_float_0, 0))
         self.connect((self.blocks_throttle2_0, 0), (self.blocks_complex_to_float_0, 0))
         self.connect((self.blocks_uchar_to_float_0, 0), (self.blocks_float_to_complex_0, 0))
         self.connect((self.channels_channel_model_0, 0), (self.blocks_throttle2_0, 0))
-        self.connect((self.custom_tag_with_packet_len_0, 0), (self.digital_crc32_bb_0, 0))
-        self.connect((self.digital_correlate_access_code_xx_ts_0, 0), (self.blocks_repack_bits_bb_1_0, 0))
+        self.connect((self.digital_correlate_access_code_xx_ts_0, 0), (self.digital_crc32_bb_0_0_0, 0))
         self.connect((self.digital_crc32_bb_0, 0), (self.blocks_tagged_stream_mux_0, 1))
         self.connect((self.digital_crc32_bb_0, 0), (self.digital_protocol_formatter_bb_0, 0))
         self.connect((self.digital_crc32_bb_0_0_0, 0), (self.zeromq_pub_sink_0, 0))
         self.connect((self.digital_protocol_formatter_bb_0, 0), (self.blocks_tagged_stream_mux_0, 0))
-        self.connect((self.zeromq_sub_source_0, 0), (self.custom_tag_with_packet_len_0, 0))
+        self.connect((self.zeromq_sub_source_0, 0), (self.blocks_stream_to_tagged_stream_0, 0))
 
 
     def closeEvent(self, event):
-        self.settings = Qt.QSettings("gnuradio/flowgraphs", "chan_loopback")
+        self.settings = Qt.QSettings("GNU Radio", "chan_loopback")
         self.settings.setValue("geometry", self.saveGeometry())
         self.stop()
         self.wait()
@@ -209,7 +213,6 @@ class chan_loopback(gr.top_block, Qt.QWidget):
 
     def set_hdr_format(self, hdr_format):
         self.hdr_format = hdr_format
-        self.digital_protocol_formatter_bb_0.set_header_format(self.hdr_format)
 
     def get_freq_offset(self):
         return self.freq_offset
@@ -223,12 +226,14 @@ class chan_loopback(gr.top_block, Qt.QWidget):
 
 def main(top_block_cls=chan_loopback, options=None):
 
+    if StrictVersion("4.5.0") <= StrictVersion(Qt.qVersion()) < StrictVersion("5.0.0"):
+        style = gr.prefs().get_string('qtgui', 'style', 'raster')
+        Qt.QApplication.setGraphicsSystem(style)
     qapp = Qt.QApplication(sys.argv)
 
     tb = top_block_cls()
 
     tb.start()
-    tb.flowgraph_started.set()
 
     tb.show()
 
