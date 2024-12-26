@@ -14,6 +14,8 @@ from packaging.version import Version as StrictVersion
 from PyQt5 import Qt
 from gnuradio import qtgui
 from gnuradio import blocks
+from gnuradio import digital
+from gnuradio import filter
 from gnuradio import gr
 from gnuradio.filter import firdes
 from gnuradio.fft import window
@@ -63,9 +65,12 @@ class channelInBetween(gr.top_block, Qt.QWidget):
         ##################################################
         # Variables
         ##################################################
+        self.samples_per_symbol = samples_per_symbol = 2
         self.samp_rate = samp_rate = 32000
         self.packet_len = packet_len = 1024
         self.pack_unpack_k = pack_unpack_k = 8
+        self.excess_bw = excess_bw = 0.35
+        self.bpsk = bpsk = digital.constellation_bpsk().base()
 
         ##################################################
         # Blocks
@@ -73,25 +78,48 @@ class channelInBetween(gr.top_block, Qt.QWidget):
 
         self.zeromq_sub_source_0 = zeromq.sub_source(gr.sizeof_char, 1, 'tcp://127.0.0.1:49203', 100, False, (-1), '', False)
         self.zeromq_pub_sink_0 = zeromq.pub_sink(gr.sizeof_char, 1, 'tcp://127.0.0.1:49201', 100, False, (-1), '', True, True)
+        self.digital_symbol_sync_xx_0 = digital.symbol_sync_cc(
+            digital.TED_MUELLER_AND_MULLER,
+            samples_per_symbol,
+            0.045,
+            1.0,
+            1.0,
+            1.5,
+            1,
+            digital.constellation_bpsk().base(),
+            digital.IR_MMSE_8TAP,
+            128,
+            [])
+        self.digital_map_bb_0 = digital.map_bb([0, 1])
+        self.digital_diff_decoder_bb_0 = digital.diff_decoder_bb(2, digital.DIFF_DIFFERENTIAL)
+        self.digital_constellation_modulator_0 = digital.generic_mod(
+            constellation=bpsk,
+            differential=True,
+            samples_per_symbol=samples_per_symbol,
+            pre_diff_code=True,
+            excess_bw=excess_bw,
+            verbose=False,
+            log=False,
+            truncate=False)
+        self.digital_constellation_decoder_cb_0 = digital.constellation_decoder_cb(bpsk)
         self.blocks_unpack_k_bits_bb_0 = blocks.unpack_k_bits_bb(pack_unpack_k)
         self.blocks_throttle2_0 = blocks.throttle( gr.sizeof_char*1, samp_rate, True, 0 if "auto" == "auto" else max( int(float(0.1) * samp_rate) if "auto" == "time" else int(0.1), 1) )
-        self.blocks_tag_debug_1 = blocks.tag_debug(gr.sizeof_char*1, 'tag debug 2', "")
-        self.blocks_tag_debug_1.set_display(False)
-        self.blocks_tag_debug_0 = blocks.tag_debug(gr.sizeof_char*1, 'tag debug 1', "")
-        self.blocks_tag_debug_0.set_display(False)
         self.blocks_stream_to_tagged_stream_0 = blocks.stream_to_tagged_stream(gr.sizeof_char, 1, packet_len, "packet_len")
-        self.blocks_pack_k_bits_bb_0 = blocks.pack_k_bits_bb(pack_unpack_k)
+        self.blocks_pack_k_bits_bb_0 = blocks.pack_k_bits_bb(8)
 
 
         ##################################################
         # Connections
         ##################################################
-        self.connect((self.blocks_pack_k_bits_bb_0, 0), (self.blocks_tag_debug_1, 0))
         self.connect((self.blocks_pack_k_bits_bb_0, 0), (self.zeromq_pub_sink_0, 0))
-        self.connect((self.blocks_stream_to_tagged_stream_0, 0), (self.blocks_tag_debug_0, 0))
         self.connect((self.blocks_stream_to_tagged_stream_0, 0), (self.blocks_unpack_k_bits_bb_0, 0))
-        self.connect((self.blocks_throttle2_0, 0), (self.blocks_pack_k_bits_bb_0, 0))
+        self.connect((self.blocks_throttle2_0, 0), (self.digital_constellation_modulator_0, 0))
         self.connect((self.blocks_unpack_k_bits_bb_0, 0), (self.blocks_throttle2_0, 0))
+        self.connect((self.digital_constellation_decoder_cb_0, 0), (self.digital_diff_decoder_bb_0, 0))
+        self.connect((self.digital_constellation_modulator_0, 0), (self.digital_symbol_sync_xx_0, 0))
+        self.connect((self.digital_diff_decoder_bb_0, 0), (self.digital_map_bb_0, 0))
+        self.connect((self.digital_map_bb_0, 0), (self.blocks_pack_k_bits_bb_0, 0))
+        self.connect((self.digital_symbol_sync_xx_0, 0), (self.digital_constellation_decoder_cb_0, 0))
         self.connect((self.zeromq_sub_source_0, 0), (self.blocks_stream_to_tagged_stream_0, 0))
 
 
@@ -102,6 +130,12 @@ class channelInBetween(gr.top_block, Qt.QWidget):
         self.wait()
 
         event.accept()
+
+    def get_samples_per_symbol(self):
+        return self.samples_per_symbol
+
+    def set_samples_per_symbol(self, samples_per_symbol):
+        self.samples_per_symbol = samples_per_symbol
 
     def get_samp_rate(self):
         return self.samp_rate
@@ -123,6 +157,19 @@ class channelInBetween(gr.top_block, Qt.QWidget):
 
     def set_pack_unpack_k(self, pack_unpack_k):
         self.pack_unpack_k = pack_unpack_k
+
+    def get_excess_bw(self):
+        return self.excess_bw
+
+    def set_excess_bw(self, excess_bw):
+        self.excess_bw = excess_bw
+
+    def get_bpsk(self):
+        return self.bpsk
+
+    def set_bpsk(self, bpsk):
+        self.bpsk = bpsk
+        self.digital_constellation_decoder_cb_0.set_constellation(self.bpsk)
 
 
 

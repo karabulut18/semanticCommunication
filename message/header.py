@@ -19,7 +19,7 @@ class Header:
         self.size = size
         if isinstance(msg_type, int):
             self.msg_type = msg_type
-        else:
+        else: 
             self.msg_type = msg_type.value
 
     def serialize(self):
