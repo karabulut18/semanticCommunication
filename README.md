@@ -10,8 +10,11 @@ Go to the links provided below.
 
 [how to open docker gui on macos](https://gist.github.com/roaldnefs/fe9f36b0e8cf2890af14572c083b516c)
 
-if you cannot run gnuradio-compaion, try add to your localip to allowed xhosts
+> xhost + localhost
+
+or try to add your localip to allowed xhosts
 > ifconfig en0 | grep inet
+
 > xhost + <_localip>
 
 I chnaged docker container command as:
