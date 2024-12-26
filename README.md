@@ -1,4 +1,4 @@
-# semanticCommunication
+# Semantic Communication 
 a testbed for semantic communication development
 
 ## environment setup
