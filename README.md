@@ -12,7 +12,7 @@ Go to the links provided below.
 
 > xhost + localhost
 
-or try to add your localip to allowed xhosts
+if localhost does not work, try to add your localip to allowed xhosts
 > ifconfig en0 | grep inet
 
 > xhost + <_localip>
