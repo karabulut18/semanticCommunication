@@ -31,3 +31,7 @@ I chnaged docker container command as:
  > --privileged \
  > --group-add=audio \
  > <_container tag>
+
+# Channel impairment simulation graph
+[file transfer using packet and BPSK](https://wiki.gnuradio.org/index.php?title=File_transfer_using_Packet_and_BPSK)
+
