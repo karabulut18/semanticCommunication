@@ -33,8 +33,6 @@ class Logger(logging.Logger):
 
         # create symbolic link to latest log file
         latest_log_symlink = f"{log_dir}/{appName}_latest.log"
-        if file_utl.file_exists(latest_log_symlink):
-            file_utl.remove_file(latest_log_symlink)
         file_utl.create_symbolic_link(log_file_name, latest_log_symlink)
 
         # log that logger is initialized with appName

@@ -50,9 +50,9 @@ class connection(object):
         left_over = b''
         while True:
             data = self.socket.recv()
-            LOG(f"received size {len(data)}- data: {data}") 
+            #LOG(f"received size {len(data)}- data: {data}") 
             self.ParseMessage(data)
-
+    
     def ParseMessage(self, data):
         header = Header.deserialize(data[:Header.get_size()])
         message = data[:header.size]
@@ -64,8 +64,9 @@ class connection(object):
         elif header.msg_type == msg_type.MSGTYPE_FILE_CONTENT.value:
             self.fileTransferUnit.HandleFileContentMessage(FileContent.deserialize(message))
         else:
-            LOGE(f"Unknown message type {header.msg_type}")
-            LOGE(f"     Message: {message}")
+            pass
+            #LOGE(f"Unknown message type {header.msg_type}")
+            #LOGE(f"     Message: {message}")
         return data[header.size:]
     def HandleTextMessage(self, message):
         LOG("Received text message")

@@ -2,9 +2,9 @@ import struct
 from enum import Enum
 
 # Constants
-NAME_BUFFER_SIZE = 256
-FILE_BUFFER_SIZE = 512
-MAX_PACKET_SIZE  = 1024
+NAME_BUFFER_SIZE = 32*2
+FILE_BUFFER_SIZE = 32*4
+MAX_PACKET_SIZE  = 32*8
 
 # Message Types
 class msg_type(Enum):
