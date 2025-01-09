@@ -323,37 +323,37 @@ blocks:
       \ 85,85,85,93]\n        # print (self.c_len)\n        self.filler = [37,85,85,85,\
       \ 35,69,79,70, 85,85,85,85,85,85,85,85, 85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,\
       \ 85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85, 85,85,85,93]\n        self.buffer\
-      \ = []\n\n\n    def work(self, input_items, output_items):\n        in_signal\
-      \   = input_items[0]\n        out_signal  = output_items[0]\n\n        available_space\
-      \ = len(out_signal)\n        total_written = 0\n\n        self.buffer.extend(in_signal)\n\
-      \n        while available_space > 0:\n            if self.state == 0:  # Idle\n\
-      \                if len(self.buffer) >= self.pkt_len:\n                    self.state\
-      \ = 1  # Move to preamble\n                else:\n                    break\n\
-      \n            elif self.state == 1:  # Send Preamble\n                to_write\
-      \ = min(len(self.preamble), available_space)\n                output_items[0][:to_write]\
-      \ = self.preamble[:to_write]\n                total_written   += to_write\n\
-      \                available_space -= to_write\n                self.indx    \
-      \   += to_write\n\n                if to_write < len(self.preamble):\n     \
-      \               self.preamble = self.preamble[to_write:]  # Send remaining preamble\
-      \ next\n                else:\n                    self.state = 2  # Move to\
-      \ data\n                break\n\n            elif self.state == 2:  # Send Data\n\
-      \                if self.data_index >= len(self.current_data):\n           \
-      \         self.state = 3  # Data complete, move to postamble\n             \
-      \       break\n\n                chunk = self.current_data[self.data_index:self.data_index\
-      \ + self.pkt_len]\n                to_write = min(len(chunk), available_space)\n\
-      \                output_items[0][:to_write] = chunk[:to_write]\n           \
-      \     self.add_item_tag(0, self.indx, pmt.intern(\"packet_len\"), pmt.from_long(to_write))\n\
-      \                self.data_index += to_write\n                total_written\
-      \   += to_write\n                available_space -= to_write\n             \
-      \   self.indx       += to_write\n\n                if self.data_index >= len(self.current_data):\n\
-      \                    self.state = 3  # All data sent\n                break\n\
-      \n            elif self.state == 3:  # Send Postamble\n                to_write\
-      \ = min(len(self.postamble), available_space)\n                output_items[0][:to_write]\
-      \ = self.postamble[:to_write]\n                total_written   += to_writenn\n\
-      \                available_space -= to_write\n                self.indx    \
-      \   += to_write\n\n                if to_write < len(self.postamble):\n    \
-      \                self.postamble = self.postamble[to_write:]  # Send remaining\
-      \ postamble next\n                else:\n                    self.state = 0\
+      \ = []\n\n    def work(self, input_items, output_items):\n        in_signal\
+      \ = input_items[0]\n        out_signal = output_items[0]\n\n        available_space\
+      \ = len(out_signal)\n        total_written = 0\n\n        # Append new input\
+      \ data to the buffer\n        self.buffer.extend(in_signal)\n\n        while\
+      \ available_space > 0:\n            if self.state == 0:  # Idle\n          \
+      \      # Check if there's enough data in the buffer to process\n           \
+      \     if len(self.buffer) >= self.pkt_len:\n                    self.state =\
+      \ 1  # Move to processing state\n                else:\n                   \
+      \ break  # Wait for more data\n\n            elif self.state == 1:  # Send Preamble\n\
+      \                to_write = min(len(self.preamble), available_space)\n     \
+      \           out_signal[total_written:total_written + to_write] = self.preamble[:to_write]\n\
+      \                total_written += to_write\n                available_space\
+      \ -= to_write\n\n                if to_write < len(self.preamble):\n       \
+      \             self.preamble = self.preamble[to_write:]  # Send remaining preamble\
+      \ later\n                else:\n                    self.state = 2  # Move to\
+      \ data state\n                break\n\n            elif self.state == 2:  #\
+      \ Send Data\n                packet = self.buffer[:self.pkt_len]\n         \
+      \       del self.buffer[:self.pkt_len]  # Remove processed data from buffer\n\
+      \n                to_write = min(len(packet), available_space)\n           \
+      \     out_signal[total_written:total_written + to_write] = packet[:to_write]\n\
+      \                self.add_item_tag(0, total_written, pmt.intern(\"packet_len\"\
+      ), pmt.from_long(len(packet)))\n                total_written += to_write\n\
+      \                available_space -= to_write\n\n                if len(self.buffer)\
+      \ < self.pkt_len:\n                    self.state = 3  # Move to postamble state\n\
+      \                break\n\n            elif self.state == 3:  # Send Postamble\n\
+      \                to_write = min(len(self.postamble), available_space)\n    \
+      \            out_signal[total_written:total_written + to_write] = self.postamble[:to_write]\n\
+      \                total_written += to_write\n                available_space\
+      \ -= to_write\n\n                if to_write < len(self.postamble):\n      \
+      \              self.postamble = self.postamble[to_write:]  # Send remaining\
+      \ postamble later\n                else:\n                    self.state = 0\
       \  # Back to idle\n                break\n\n        return total_written\n"
     affinity: ''
     alias: ''

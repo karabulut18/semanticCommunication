@@ -35,63 +35,58 @@ class blk(gr.sync_block):
         self.filler = [37,85,85,85, 35,69,79,70, 85,85,85,85,85,85,85,85, 85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85, 85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85, 85,85,85,93]
         self.buffer = []
 
-
     def work(self, input_items, output_items):
-        in_signal   = input_items[0]
-        out_signal  = output_items[0]
+        in_signal = input_items[0]
+        out_signal = output_items[0]
 
         available_space = len(out_signal)
         total_written = 0
 
+        # Append new input data to the buffer
         self.buffer.extend(in_signal)
 
         while available_space > 0:
             if self.state == 0:  # Idle
+                # Check if there's enough data in the buffer to process
                 if len(self.buffer) >= self.pkt_len:
-                    self.state = 1  # Move to preamble
+                    self.state = 1  # Move to processing state
                 else:
-                    break
+                    break  # Wait for more data
 
             elif self.state == 1:  # Send Preamble
                 to_write = min(len(self.preamble), available_space)
-                output_items[0][:to_write] = self.preamble[:to_write]
-                total_written   += to_write
+                out_signal[total_written:total_written + to_write] = self.preamble[:to_write]
+                total_written += to_write
                 available_space -= to_write
-                self.indx       += to_write
 
                 if to_write < len(self.preamble):
-                    self.preamble = self.preamble[to_write:]  # Send remaining preamble next
+                    self.preamble = self.preamble[to_write:]  # Send remaining preamble later
                 else:
-                    self.state = 2  # Move to data
+                    self.state = 2  # Move to data state
                 break
 
             elif self.state == 2:  # Send Data
-                if self.data_index >= len(self.current_data):
-                    self.state = 3  # Data complete, move to postamble
-                    break
+                packet = self.buffer[:self.pkt_len]
+                del self.buffer[:self.pkt_len]  # Remove processed data from buffer
 
-                chunk = self.current_data[self.data_index:self.data_index + self.pkt_len]
-                to_write = min(len(chunk), available_space)
-                output_items[0][:to_write] = chunk[:to_write]
-                self.add_item_tag(0, self.indx, pmt.intern("packet_len"), pmt.from_long(to_write))
-                self.data_index += to_write
-                total_written   += to_write
+                to_write = min(len(packet), available_space)
+                out_signal[total_written:total_written + to_write] = packet[:to_write]
+                self.add_item_tag(0, total_written, pmt.intern("packet_len"), pmt.from_long(len(packet)))
+                total_written += to_write
                 available_space -= to_write
-                self.indx       += to_write
 
-                if self.data_index >= len(self.current_data):
-                    self.state = 3  # All data sent
+                if len(self.buffer) < self.pkt_len:
+                    self.state = 3  # Move to postamble state
                 break
 
             elif self.state == 3:  # Send Postamble
                 to_write = min(len(self.postamble), available_space)
-                output_items[0][:to_write] = self.postamble[:to_write]
-                total_written   += to_writenn
+                out_signal[total_written:total_written + to_write] = self.postamble[:to_write]
+                total_written += to_write
                 available_space -= to_write
-                self.indx       += to_write
 
                 if to_write < len(self.postamble):
-                    self.postamble = self.postamble[to_write:]  # Send remaining postamble next
+                    self.postamble = self.postamble[to_write:]  # Send remaining postamble later
                 else:
                     self.state = 0  # Back to idle
                 break
