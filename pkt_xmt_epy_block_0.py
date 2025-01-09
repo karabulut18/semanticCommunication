@@ -52,17 +52,6 @@ class blk(gr.sync_block):
         self.data = ""
         initialize_logger("embedded_python_block_test")
 
-    #    if (os.path.exists(self.FileName)):
-    #        # open input file
-    #        self.f_in = open (self.FileName, 'rb')
-    #        self._eof = False
-    #        if (self._debug):
-    #            print ("File name:", self.FileName)
-    #        self.state = 1
-    #    else:
-    #        print(self.FileName, 'does not exist')
-    #        self._eof = True
-    #        self.state = 0
         self.state = 1
 
         self.heartbeat       = "HEAERTBEAT_"
@@ -95,7 +84,6 @@ class blk(gr.sync_block):
                 )
             self.indx += self.c_len
             i = 0
-            max_length = min(self.c_len, len(self.char_list))
             while (i < max_length):
                 output_items[0][i] = self.char_list[i]
                 i += 1
@@ -137,30 +125,6 @@ class blk(gr.sync_block):
                     i += 1
                 return (b_len)
 
-
-        #elif (self.state == 3):
-        #    # send file name
-        #    fn_len = len (self.FileName)
-        #    key1 = pmt.intern("packet_len")
-        #    val1 = pmt.from_long(fn_len+8)
-        #    self.add_item_tag(0, # Write to output port 0
-        #        self.indx,   # Index of the tag
-        #        key1,   # Key of the tag
-        #        val1    # Value of the tag
-        #        )
-        #    self.indx += (fn_len+8)
-        #    i = 0
-        #    while (i < 8):
-        #        output_items[0][i] = self.filler[i]
-        #        i += 1
-        #    j = 0
-        #    while (i < (fn_len+8)):
-        #        output_items[0][i] = ord(self.FileName[j])
-        #        i += 1
-        #        j += 1
-        #    self.state = 4
-        #    return (fn_len+8)
-
         elif (self.state == 4):
             # send post filler
             if (self._debug):
@@ -174,6 +138,7 @@ class blk(gr.sync_block):
                 )
             self.indx += self.f_len
             i = 0
+            LOG(f"size of filler {self.f_len}: size of output_items[0] {len(output_items[0])}")
             while (i < self.f_len):
                 output_items[0][i] = self.filler[i]
                 i += 1
