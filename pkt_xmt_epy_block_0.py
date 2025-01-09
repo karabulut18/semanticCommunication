@@ -1,5 +1,5 @@
 """
-Embedded Python Block: File Source to Tagged Stream
+Embedded Python Block: ZMQ data to Tagged Stream
 """
 
 import numpy as np
@@ -9,144 +9,91 @@ import pmt
 import os.path
 import sys
 import base64
-from header import Header, msg_type
-from text   import textMessage
-from logger import LOG, LOGE, initialize_logger
-from time import sleep
 
 """
 State definitions
-    0   idle
+    0   idle (wait for the message)
     1   send preamble
-    2   send file data
-    3   send file name
-    4   send post filler
-"""
-# message queue
-#messageQueue = deque()
-
-"""
-State definitions
-    0   empty - idle
-    <messsageSend>
-        1   message send start
-        2   send preamble
-        3   send message
-        4   send post filler
-        5   message send end
+    2   send data
+    3   send post filler
 """
 
 class blk(gr.sync_block):
-    def __init__(self, FileName='None', Pkt_len=52):
+    def __init__(self, Pkt_len=52, debug_active=False):
         gr.sync_block.__init__(
             self,
-            name='EPB: File Source to Tagged Stream',
-            in_sig=None,
+            name='ZMQ Data to Tagged Stream',
+            in_sig=[np.uint8],
             out_sig=[np.uint8])
-        self.FileName = FileName
-        self.Pkt_len = Pkt_len
-        self.state = 0      # idle state
-        self.pre_count = 0
-        self.indx = 0
-        self._debug = 0     # debug
-        self.data = ""
-        initialize_logger("embedded_python_block_test")
+        self.Pkt_len    = Pkt_len
+        self.state      = 0 # idle state
+        self._debug     = debug_active
+        self.state = 0
 
-        self.state = 1
-
-        self.heartbeat       = "HEAERTBEAT_"
-        self.heartbeat_count = 0
-
-        self.char_list = [37,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85, 85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85, 85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85, 85,85,85,93]
-        self.c_len = len (self.char_list)
+        self.preamble = [37,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85, 85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85, 85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85, 85,85,85,93]
         # print (self.c_len)
         self.filler = [37,85,85,85, 35,69,79,70, 85,85,85,85,85,85,85,85, 85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85, 85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85, 85,85,85,93]
-        self.f_len = len (self.filler)
+        self.buffer = []
+
 
     def work(self, input_items, output_items):
+        in_signal   = input_items[0]
+        out_signal  = output_items[0]
 
-        if (self.state == 0):
-            # idle
-            sleep(1)
-            self.state = 1
-            return (0)
+        available_space = len(out_signal)
+        total_written = 0
 
-        elif (self.state == 1):
-            # send preamble
-            if (self._debug):
-                print ("state = 1", self.pre_count)
-            key1 = pmt.intern("packet_len")
-            val1 = pmt.from_long(self.c_len)
-            self.add_item_tag(0, # Write to output port 0
-                self.indx,   # Index of the tag
-                key1,   # Key of the tag
-                val1    # Value of the tag
-                )
-            self.indx += self.c_len
-            i = 0
-            while (i < max_length):
-                output_items[0][i] = self.char_list[i]
-                i += 1
-            self.pre_count += 1
-            if (self.pre_count > 64):
-                self.pre_count = 0
-                self.state = 2      # send msg
-            return (self.c_len)
+        self.buffer.extend(in_signal)
 
-        elif (self.state == 2):
-            string_buffer = self.heartbeat + str(self.heartbeat_count)
-            self.heartbeat_count += 1
-            heartbeatMessage = textMessage(string_buffer)
-            heartbeatMessage.print_text()
-            buffer = heartbeatMessage.serialize()
-            buffer_size = len(buffer)
-            buffer_index = 0
-            while(buffer_index < buffer_size):
-                b_len = 0
-                if(buffer_index + self.Pkt_len > buffer_size):
-                    b_len = buffer_size - buffer_index
-                    self.state = 4 # after that send postamble
+        while available_space > 0:
+            if self.state == 0:  # Idle
+                if len(self.buffer) >= self.pkt_len:
+                    self.state = 1  # Move to preamble
                 else:
-                    b_len = self.Pkt_len
+                    break
 
-                buff            = buffer[buffer_index : b_len]
-                buffer_index    = buffer_index + b_len
-                key0 = pmt.intern("packet_len")
-                val0 = pmt.from_long(b_len)
-                self.add_item_tag(0, # Write to output port 0
-                    self.indx,   # Index of the tag
-                    key0,   # Key of the tag
-                    val0    # Value of the tag
-                    )
-                self.indx += b_len
-                i = 0
-                while (i < b_len):
-                    output_items[0][i] = buff[i]
-                    i += 1
-                return (b_len)
+            elif self.state == 1:  # Send Preamble
+                to_write = min(len(self.preamble), available_space)
+                output_items[0][:to_write] = self.preamble[:to_write]
+                total_written   += to_write
+                available_space -= to_write
+                self.indx       += to_write
 
-        elif (self.state == 4):
-            # send post filler
-            if (self._debug):
-                print ("state = 4", self.pre_count)
-            key1 = pmt.intern("packet_len")
-            val1 = pmt.from_long(self.f_len)
-            self.add_item_tag(0, # Write to output port 0
-                self.indx,   # Index of the tag
-                key1,   # Key of the tag
-                val1    # Value of the tag
-                )
-            self.indx += self.f_len
-            i = 0
-            LOG(f"size of filler {self.f_len}: size of output_items[0] {len(output_items[0])}")
-            while (i < self.f_len):
-                output_items[0][i] = self.filler[i]
-                i += 1
-            self.pre_count += 1
-            if (self.pre_count > 16):
-                self.pre_count = 0
-                self.state = 0      # idle
-            return (self.f_len)
+                if to_write < len(self.preamble):
+                    self.preamble = self.preamble[to_write:]  # Send remaining preamble next
+                else:
+                    self.state = 2  # Move to data
+                break
 
-        return (0)
+            elif self.state == 2:  # Send Data
+                if self.data_index >= len(self.current_data):
+                    self.state = 3  # Data complete, move to postamble
+                    break
 
+                chunk = self.current_data[self.data_index:self.data_index + self.pkt_len]
+                to_write = min(len(chunk), available_space)
+                output_items[0][:to_write] = chunk[:to_write]
+                self.add_item_tag(0, self.indx, pmt.intern("packet_len"), pmt.from_long(to_write))
+                self.data_index += to_write
+                total_written   += to_write
+                available_space -= to_write
+                self.indx       += to_write
+
+                if self.data_index >= len(self.current_data):
+                    self.state = 3  # All data sent
+                break
+
+            elif self.state == 3:  # Send Postamble
+                to_write = min(len(self.postamble), available_space)
+                output_items[0][:to_write] = self.postamble[:to_write]
+                total_written   += to_writenn
+                available_space -= to_write
+                self.indx       += to_write
+
+                if to_write < len(self.postamble):
+                    self.postamble = self.postamble[to_write:]  # Send remaining postamble next
+                else:
+                    self.state = 0  # Back to idle
+                break
+
+        return total_written
