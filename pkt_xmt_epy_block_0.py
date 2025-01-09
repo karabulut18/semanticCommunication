@@ -25,7 +25,7 @@ class blk(gr.sync_block):
             name='ZMQ Data to Tagged Stream',
             in_sig=[np.uint8],
             out_sig=[np.uint8])
-        self.Pkt_len    = Pkt_len
+        self.pkt_len    = Pkt_len
         self.state      = 0 # idle state
         self._debug     = debug_active
         self.state = 0

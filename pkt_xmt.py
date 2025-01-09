@@ -144,7 +144,7 @@ class pkt_xmt(gr.top_block, Qt.QWidget):
         self.mmse_resampler_xx_0 = filter.mmse_resampler_cc(0, (1.0/((usrp_rate/samp_rate)*rs_ratio)))
         self.fft_filter_xxx_0_0_0 = filter.fft_filter_ccc(1, low_pass_filter_taps, 1)
         self.fft_filter_xxx_0_0_0.declare_sample_delay(0)
-        self.epy_block_0 = epy_block_0.blk(Pkt_len=60, debug_active=False)
+        self.epy_block_0 = epy_block_0.blk(Pkt_len=60, debug_active=True)
         self.digital_protocol_formatter_bb_0 = digital.protocol_formatter_bb(hdr_format, "packet_len")
         self.digital_crc32_bb_0 = digital.crc32_bb(False, "packet_len", True)
         self.digital_constellation_modulator_0 = digital.generic_mod(

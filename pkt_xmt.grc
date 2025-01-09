@@ -285,7 +285,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [496, 204.0]
+    coordinate: [544, 220.0]
     rotation: 0
     state: true
 - name: digital_protocol_formatter_bb_0
@@ -316,7 +316,7 @@ blocks:
       \ send post filler\n\"\"\"\n\nclass blk(gr.sync_block):\n    def __init__(self,\
       \ Pkt_len=52, debug_active=False):\n        gr.sync_block.__init__(\n      \
       \      self,\n            name='ZMQ Data to Tagged Stream',\n            in_sig=[np.uint8],\n\
-      \            out_sig=[np.uint8])\n        self.Pkt_len    = Pkt_len\n      \
+      \            out_sig=[np.uint8])\n        self.pkt_len    = Pkt_len\n      \
       \  self.state      = 0 # idle state\n        self._debug     = debug_active\n\
       \        self.state = 0\n\n        self.preamble = [37,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,\
       \ 85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85, 85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,\
@@ -360,16 +360,16 @@ blocks:
     comment: 'Filename is specified on the command line, e.g.:
 
       python3 pkt_xmt.py --InFile="../gr-logo.png"'
-    debug_active: 'False'
+    debug_active: 'True'
     maxoutbuf: '0'
     minoutbuf: '0'
   states:
     _io_cache: ('ZMQ Data to Tagged Stream', 'blk', [('Pkt_len', '52'), ('debug_active',
-      'False')], [('0', 'byte', 1)], [('0', 'byte', 1)], '', ['Pkt_len'])
+      'False')], [('0', 'byte', 1)], [('0', 'byte', 1)], '', [])
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [224, 184.0]
+    coordinate: [264, 212.0]
     rotation: 0
     state: true
 - name: fft_filter_xxx_0_0_0
