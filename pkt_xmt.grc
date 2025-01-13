@@ -334,36 +334,35 @@ blocks:
       \ data in the buffer, move to the preamble state\n                if len(self.buffer)\
       \ > 0:\n                    self.state = 1\n                else:\n        \
       \            break\n\n            elif self.state == 1:  # Send Preamble\n \
-      \               to_write = min(self.preamble_len, available_space)\n       \
-      \         out_stream[total_written:total_written + to_write] = self.preamble[:to_write]\n\
-      \n                # Tag for the preamble\n                self.add_item_tag(0,\
-      \ self.indx, pmt.intern(\"packet_len\"), pmt.from_long(self.preamble_len))\n\
+      \               to_write = min(self.preamble_len, available_space)\n\n     \
+      \           # Tag for the preamble\n                self.add_item_tag(0, self.indx,\
+      \ pmt.intern(\"packet_len\"), pmt.from_long(to_write))\n                out_stream[total_written:total_written\
+      \ + to_write] = self.preamble[:to_write]\n                self.indx += to_write\n\
+      \                total_written += to_write\n                available_space\
+      \ -= to_write\n\n                # Transition to data if the preamble is fully\
+      \ sent\n                if to_write == self.preamble_len:\n                \
+      \    self.state = 2\n\n            elif self.state == 2:  # Send Data\n    \
+      \            if len(self.buffer) == 0:\n                    # No more data in\
+      \ the buffer, move to postamble\n                    self.state = 3\n      \
+      \              continue\n\n                # Take a chunk of data from the buffer\n\
+      \                data_chunk = self.buffer[:self.Pkt_len]\n                del\
+      \ self.buffer[:self.Pkt_len]  # Remove processed data\n\n                chunk_len\
+      \ = len(data_chunk)\n                to_write = min(chunk_len, available_space)\n\
+      \n                # Tag for the data chunk\n                self.add_item_tag(0,\
+      \ self.indx, pmt.intern(\"packet_len\"), pmt.from_long(to_write))\n        \
+      \        out_stream[total_written:total_written + to_write] = data_chunk[:to_write]\n\
+      \                self.indx += to_write\n                total_written += to_write\n\
+      \                available_space -= to_write\n\n                # Wait for the\
+      \ next call if the chunk isn't fully written\n                if to_write <\
+      \ chunk_len:\n                    break\n\n            elif self.state == 3:\
+      \  # Send Postamble\n                to_write = min(self.postamble_len, available_space)\n\
+      \n                # Tag for the postamble\n                self.add_item_tag(0,\
+      \ self.indx, pmt.intern(\"packet_len\"), pmt.from_long(to_write))\n        \
+      \        out_stream[total_written:total_written + to_write] = self.postamble[:to_write]\n\
       \                self.indx += to_write\n                total_written += to_write\n\
       \                available_space -= to_write\n\n                # Transition\
-      \ to data if the preamble is fully sent\n                if to_write == self.preamble_len:\n\
-      \                    self.state = 2\n\n            elif self.state == 2:  #\
-      \ Send Data\n                if len(self.buffer) == 0:\n                   \
-      \ # No more data in the buffer, move to postamble\n                    self.state\
-      \ = 3\n                    continue\n\n                # Take a chunk of data\
-      \ from the buffer\n                data_chunk = self.buffer[:self.Pkt_len]\n\
-      \                del self.buffer[:self.Pkt_len]  # Remove processed data\n\n\
-      \                chunk_len = len(data_chunk)\n                to_write = min(chunk_len,\
-      \ available_space)\n                out_stream[total_written:total_written +\
-      \ to_write] = data_chunk[:to_write]\n\n                # Tag for the data chunk\n\
-      \                self.add_item_tag(0, self.indx, pmt.intern(\"packet_len\"),\
-      \ pmt.from_long(chunk_len))\n                self.indx += to_write\n       \
-      \         total_written += to_write\n                available_space -= to_write\n\
-      \n                # Wait for the next call if the chunk isn't fully written\n\
-      \                if to_write < chunk_len:\n                    break\n\n   \
-      \         elif self.state == 3:  # Send Postamble\n                to_write\
-      \ = min(self.postamble_len, available_space)\n                out_stream[total_written:total_written\
-      \ + to_write] = self.postamble[:to_write]\n\n                # Tag for the postamble\n\
-      \                self.add_item_tag(0, self.indx, pmt.intern(\"packet_len\"),\
-      \ pmt.from_long(self.postamble_len))\n                self.indx += to_write\n\
-      \                total_written += to_write\n                available_space\
-      \ -= to_write\n\n                # Transition back to idle after sending the\
-      \ postamble\n                if to_write == self.postamble_len:\n          \
-      \          self.state = 0\n\n        return total_written\n\n"
+      \ back to idle after sending the postamble\n                if to_write == self.postamble_len:\n\
+      \                    self.state = 0\n\n        return total_written\n\n"
     affinity: ''
     alias: ''
     comment: add tags "packet_len" to byte stream

@@ -56,10 +56,10 @@ class blk(gr.sync_block):
 
             elif self.state == 1:  # Send Preamble
                 to_write = min(self.preamble_len, available_space)
-                out_stream[total_written:total_written + to_write] = self.preamble[:to_write]
 
                 # Tag for the preamble
-                self.add_item_tag(0, self.indx, pmt.intern("packet_len"), pmt.from_long(self.preamble_len))
+                self.add_item_tag(0, self.indx, pmt.intern("packet_len"), pmt.from_long(to_write))
+                out_stream[total_written:total_written + to_write] = self.preamble[:to_write]
                 self.indx += to_write
                 total_written += to_write
                 available_space -= to_write
@@ -80,10 +80,10 @@ class blk(gr.sync_block):
 
                 chunk_len = len(data_chunk)
                 to_write = min(chunk_len, available_space)
-                out_stream[total_written:total_written + to_write] = data_chunk[:to_write]
 
                 # Tag for the data chunk
-                self.add_item_tag(0, self.indx, pmt.intern("packet_len"), pmt.from_long(chunk_len))
+                self.add_item_tag(0, self.indx, pmt.intern("packet_len"), pmt.from_long(to_write))
+                out_stream[total_written:total_written + to_write] = data_chunk[:to_write]
                 self.indx += to_write
                 total_written += to_write
                 available_space -= to_write
@@ -94,10 +94,10 @@ class blk(gr.sync_block):
 
             elif self.state == 3:  # Send Postamble
                 to_write = min(self.postamble_len, available_space)
-                out_stream[total_written:total_written + to_write] = self.postamble[:to_write]
 
                 # Tag for the postamble
-                self.add_item_tag(0, self.indx, pmt.intern("packet_len"), pmt.from_long(self.postamble_len))
+                self.add_item_tag(0, self.indx, pmt.intern("packet_len"), pmt.from_long(to_write))
+                out_stream[total_written:total_written + to_write] = self.postamble[:to_write]
                 self.indx += to_write
                 total_written += to_write
                 available_space -= to_write
