@@ -285,7 +285,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [544, 220.0]
+    coordinate: [512, 204.0]
     rotation: 0
     state: true
 - name: digital_protocol_formatter_bb_0
@@ -309,67 +309,73 @@ blocks:
   id: epy_block
   parameters:
     Pkt_len: '60'
-    _source_code: "\"\"\"\nEmbedded Python Block: ZMQ data to Tagged Stream\n\"\"\"\
-      \n\nimport numpy as np\nfrom gnuradio import gr\nimport time\nimport pmt\nimport\
-      \ os.path\nimport sys\nimport base64\n\n\"\"\"\nState definitions\n    0   idle\
-      \ (wait for the message)\n    1   send preamble\n    2   send data\n    3  \
-      \ send post filler\n\"\"\"\n\nclass blk(gr.sync_block):\n    def __init__(self,\
-      \ Pkt_len=52, debug_active=False):\n        gr.sync_block.__init__(\n      \
-      \      self,\n            name='ZMQ Data to Tagged Stream',\n            in_sig=[np.uint8],\n\
-      \            out_sig=[np.uint8])\n        self.pkt_len    = Pkt_len\n      \
-      \  self.state      = 0 # idle state\n        self._debug     = debug_active\n\
-      \        self.state = 0\n\n        self.preamble = [37,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,\
+    _source_code: "\"\"\"\nEmbedded Python Block: Byte Stream to Tagged Stream\n\"\
+      \"\"\n\nimport numpy as np\nfrom gnuradio import gr\nimport pmt\n\n\"\"\"\n\
+      State Definitions:\n    0: Idle\n    1: Send Preamble\n    2: Send Data\n  \
+      \  3: Send Postamble\n\"\"\"\n\nclass blk(gr.sync_block):\n    def __init__(self,\
+      \ Pkt_len=52):\n        gr.sync_block.__init__(\n            self,\n       \
+      \     name=\"EPB: Byte Stream to Tagged Stream\",\n            in_sig=[np.uint8],\
+      \  # Input stream of bytes\n            out_sig=[np.uint8]  # Output stream\
+      \ of bytes\n        )\n\n        self.Pkt_len = Pkt_len\n        self.state\
+      \ = 0  # Start in idle state\n        self.indx = 0  # Absolute index for tagging\n\
+      \n        # Preamble and Postamble definitions\n        self.preamble = np.array([37,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,\
       \ 85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85, 85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,\
-      \ 85,85,85,93]\n        # print (self.c_len)\n        self.filler = [37,85,85,85,\
-      \ 35,69,79,70, 85,85,85,85,85,85,85,85, 85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,\
-      \ 85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85, 85,85,85,93]\n        self.buffer\
-      \ = []\n\n    def work(self, input_items, output_items):\n        in_signal\
-      \ = input_items[0]\n        out_signal = output_items[0]\n\n        available_space\
-      \ = len(out_signal)\n        total_written = 0\n\n        # Append new input\
-      \ data to the buffer\n        self.buffer.extend(in_signal)\n\n        while\
-      \ available_space > 0:\n            if self.state == 0:  # Idle\n          \
-      \      # Check if there's enough data in the buffer to process\n           \
-      \     if len(self.buffer) >= self.pkt_len:\n                    self.state =\
-      \ 1  # Move to processing state\n                else:\n                   \
-      \ break  # Wait for more data\n\n            elif self.state == 1:  # Send Preamble\n\
-      \                to_write = min(len(self.preamble), available_space)\n     \
-      \           out_signal[total_written:total_written + to_write] = self.preamble[:to_write]\n\
+      \ 85,85,85,93], dtype=np.uint8)\n        self.preamble_len = len(self.preamble)\n\
+      \        self.postamble = np.array([37,85,85,85, 35,69,79,70, 85,85,85,85,85,85,85,85,\
+      \ 85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85, 85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,\
+      \ 85,85,85,93], dtype=np.uint8)\n        self.postamble_len = len(self.postamble)\n\
+      \n        # Internal buffer to hold incoming data\n        self.buffer = bytearray()\n\
+      \n    def work(self, input_items, output_items):\n        in_stream = input_items[0]\n\
+      \        out_stream = output_items[0]\n\n        available_space = len(out_stream)\
+      \  # Remaining space in the output buffer\n        total_written = 0  # Track\
+      \ how much data is written in this call\n\n        # Add incoming data to the\
+      \ internal buffer\n        self.buffer.extend(in_stream)\n\n        while available_space\
+      \ > 0:\n            if self.state == 0:  # Idle\n                # If there's\
+      \ data in the buffer, move to the preamble state\n                if len(self.buffer)\
+      \ > 0:\n                    self.state = 1\n                else:\n        \
+      \            break\n\n            elif self.state == 1:  # Send Preamble\n \
+      \               to_write = min(self.preamble_len, available_space)\n       \
+      \         out_stream[total_written:total_written + to_write] = self.preamble[:to_write]\n\
+      \n                # Tag for the preamble\n                self.add_item_tag(0,\
+      \ self.indx, pmt.intern(\"packet_len\"), pmt.from_long(self.preamble_len))\n\
+      \                self.indx += to_write\n                total_written += to_write\n\
+      \                available_space -= to_write\n\n                # Transition\
+      \ to data if the preamble is fully sent\n                if to_write == self.preamble_len:\n\
+      \                    self.state = 2\n\n            elif self.state == 2:  #\
+      \ Send Data\n                if len(self.buffer) == 0:\n                   \
+      \ # No more data in the buffer, move to postamble\n                    self.state\
+      \ = 3\n                    continue\n\n                # Take a chunk of data\
+      \ from the buffer\n                data_chunk = self.buffer[:self.Pkt_len]\n\
+      \                del self.buffer[:self.Pkt_len]  # Remove processed data\n\n\
+      \                chunk_len = len(data_chunk)\n                to_write = min(chunk_len,\
+      \ available_space)\n                out_stream[total_written:total_written +\
+      \ to_write] = data_chunk[:to_write]\n\n                # Tag for the data chunk\n\
+      \                self.add_item_tag(0, self.indx, pmt.intern(\"packet_len\"),\
+      \ pmt.from_long(chunk_len))\n                self.indx += to_write\n       \
+      \         total_written += to_write\n                available_space -= to_write\n\
+      \n                # Wait for the next call if the chunk isn't fully written\n\
+      \                if to_write < chunk_len:\n                    break\n\n   \
+      \         elif self.state == 3:  # Send Postamble\n                to_write\
+      \ = min(self.postamble_len, available_space)\n                out_stream[total_written:total_written\
+      \ + to_write] = self.postamble[:to_write]\n\n                # Tag for the postamble\n\
+      \                self.add_item_tag(0, self.indx, pmt.intern(\"packet_len\"),\
+      \ pmt.from_long(self.postamble_len))\n                self.indx += to_write\n\
       \                total_written += to_write\n                available_space\
-      \ -= to_write\n\n                if to_write < len(self.preamble):\n       \
-      \             self.preamble = self.preamble[to_write:]  # Send remaining preamble\
-      \ later\n                else:\n                    self.state = 2  # Move to\
-      \ data state\n                break\n\n            elif self.state == 2:  #\
-      \ Send Data\n                packet = self.buffer[:self.pkt_len]\n         \
-      \       del self.buffer[:self.pkt_len]  # Remove processed data from buffer\n\
-      \n                to_write = min(len(packet), available_space)\n           \
-      \     out_signal[total_written:total_written + to_write] = packet[:to_write]\n\
-      \                self.add_item_tag(0, total_written, pmt.intern(\"packet_len\"\
-      ), pmt.from_long(len(packet)))\n                total_written += to_write\n\
-      \                available_space -= to_write\n\n                if len(self.buffer)\
-      \ < self.pkt_len:\n                    self.state = 3  # Move to postamble state\n\
-      \                break\n\n            elif self.state == 3:  # Send Postamble\n\
-      \                to_write = min(len(self.postamble), available_space)\n    \
-      \            out_signal[total_written:total_written + to_write] = self.postamble[:to_write]\n\
-      \                total_written += to_write\n                available_space\
-      \ -= to_write\n\n                if to_write < len(self.postamble):\n      \
-      \              self.postamble = self.postamble[to_write:]  # Send remaining\
-      \ postamble later\n                else:\n                    self.state = 0\
-      \  # Back to idle\n                break\n\n        return total_written\n"
+      \ -= to_write\n\n                # Transition back to idle after sending the\
+      \ postamble\n                if to_write == self.postamble_len:\n          \
+      \          self.state = 0\n\n        return total_written\n\n"
     affinity: ''
     alias: ''
-    comment: 'Filename is specified on the command line, e.g.:
-
-      python3 pkt_xmt.py --InFile="../gr-logo.png"'
-    debug_active: 'True'
+    comment: add tags "packet_len" to byte stream
     maxoutbuf: '0'
     minoutbuf: '0'
   states:
-    _io_cache: ('ZMQ Data to Tagged Stream', 'blk', [('Pkt_len', '52'), ('debug_active',
-      'False')], [('0', 'byte', 1)], [('0', 'byte', 1)], '', [])
+    _io_cache: '(''EPB: Byte Stream to Tagged Stream'', ''blk'', [(''Pkt_len'', ''52'')],
+      [(''0'', ''byte'', 1)], [(''0'', ''byte'', 1)], '''', [''Pkt_len''])'
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [264, 212.0]
+    coordinate: [240, 172.0]
     rotation: 0
     state: true
 - name: fft_filter_xxx_0_0_0
@@ -575,7 +581,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [24, 176.0]
+    coordinate: [16, 140.0]
     rotation: 0
     state: enabled
 
