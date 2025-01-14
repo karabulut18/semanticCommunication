@@ -156,9 +156,9 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [632, 300.0]
+    coordinate: [440, 212.0]
     rotation: 0
-    state: enabled
+    state: true
 - name: channels_channel_model_0
   id: channels_channel_model
   parameters:
@@ -177,13 +177,13 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [416, 276.0]
+    coordinate: [240, 188.0]
     rotation: 0
     state: enabled
 - name: zeromq_pub_sink_0
   id: zeromq_pub_sink
   parameters:
-    address: tcp://127.0.0.1:49200
+    address: tcp://127.0.0.1:49201
     affinity: ''
     alias: ''
     bind: 'True'
@@ -199,13 +199,13 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [864, 276.0]
+    coordinate: [640, 188.0]
     rotation: 0
     state: true
 - name: zeromq_sub_source_0
   id: zeromq_sub_source
   parameters:
-    address: tcp://127.0.0.1:49207
+    address: tcp://127.0.0.1:49203
     affinity: ''
     alias: ''
     bind: 'False'
@@ -222,7 +222,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [88, 276.0]
+    coordinate: [16, 188.0]
     rotation: 0
     state: true
 

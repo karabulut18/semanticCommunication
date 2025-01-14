@@ -156,21 +156,6 @@ blocks:
     coordinate: [624, 156.0]
     rotation: 0
     state: true
-- name: blocks_message_debug_0
-  id: blocks_message_debug
-  parameters:
-    affinity: ''
-    alias: ''
-    comment: ''
-    en_uvec: 'True'
-    log_level: info
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [1424, 704.0]
-    rotation: 0
-    state: true
 - name: blocks_repack_bits_bb_1_0
   id: blocks_repack_bits_bb
   parameters:
@@ -391,23 +376,6 @@ blocks:
     bus_source: false
     bus_structure: null
     coordinate: [176, 300.0]
-    rotation: 0
-    state: true
-- name: pdu_tagged_stream_to_pdu_0
-  id: pdu_tagged_stream_to_pdu
-  parameters:
-    affinity: ''
-    alias: ''
-    comment: ''
-    maxoutbuf: '0'
-    minoutbuf: '0'
-    tag: packet_len
-    type: byte
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [1248, 628.0]
     rotation: 0
     state: true
 - name: qtgui_const_sink_x_0
@@ -852,13 +820,13 @@ blocks:
 - name: zeromq_pub_sink_0
   id: zeromq_pub_sink
   parameters:
-    address: tcp://127.0.0.1:49201
+    address: tcp://127.0.0.1:49207
     affinity: ''
     alias: ''
     bind: 'True'
     comment: ''
     drop_on_hwm: 'True'
-    hwm: '10'
+    hwm: '-1'
     key: ''
     pass_tags: 'False'
     timeout: '100'
@@ -874,7 +842,7 @@ blocks:
 - name: zeromq_sub_source_0
   id: zeromq_sub_source
   parameters:
-    address: tcp://127.0.0.1:49200
+    address: tcp://127.0.0.1:49201
     affinity: ''
     alias: ''
     bind: 'False'
@@ -906,7 +874,6 @@ connections:
 - [digital_correlate_access_code_xx_ts_0, '0', blocks_uchar_to_float_0_0_0, '0']
 - [digital_costas_loop_cc_0, '0', digital_constellation_decoder_cb_0, '0']
 - [digital_costas_loop_cc_0, '0', qtgui_const_sink_x_0, '0']
-- [digital_crc32_bb_0_0, '0', pdu_tagged_stream_to_pdu_0, '0']
 - [digital_crc32_bb_0_0, '0', zeromq_pub_sink_0, '0']
 - [digital_diff_decoder_bb_0, '0', virtual_sink_0_0, '0']
 - [digital_fll_band_edge_cc_0, '0', qtgui_freq_sink_x_0, '0']
@@ -914,7 +881,6 @@ connections:
 - [digital_map_bb_0, '0', blocks_uchar_to_float_0_0, '0']
 - [digital_map_bb_0, '0', digital_correlate_access_code_xx_ts_0, '0']
 - [digital_symbol_sync_xx_0, '0', digital_costas_loop_cc_0, '0']
-- [pdu_tagged_stream_to_pdu_0, pdus, blocks_message_debug_0, print]
 - [rational_resampler_xxx_0, '0', blocks_throttle2_0, '0']
 - [virtual_source_0, '0', digital_symbol_sync_xx_0, '0']
 - [virtual_source_2, '0', digital_map_bb_0, '0']
