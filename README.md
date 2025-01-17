@@ -35,5 +35,6 @@ I chnaged docker container command as:
 # Channel impairment simulation graph
 [file transfer using packet and BPSK](https://wiki.gnuradio.org/index.php?title=File_transfer_using_Packet_and_BPSK)
 
-The embedded python blocks are altered to integrate with my custom message structure
+EPB: File Source to Tagged Stream block is altered to integrate with the filePublisher in pkt_xmt.grc
+A Zmq sub source is added and EPB: Byte to Tagged Stream block is connected to it.
 
