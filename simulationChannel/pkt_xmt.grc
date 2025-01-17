@@ -52,6 +52,7 @@ blocks:
     const_points: '[-1-1j, -1+1j, 1+1j, 1-1j]'
     dims: '1'
     normalization: digital.constellation.AMPLITUDE_NORMALIZATION
+    npwr: '1.0'
     precision: '8'
     rot_sym: '4'
     soft_dec_lut: None
@@ -284,7 +285,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [536, 228.0]
+    coordinate: [520, 196.0]
     rotation: 0
     state: true
 - name: digital_protocol_formatter_bb_0
@@ -301,13 +302,13 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [776, 164.0]
+    coordinate: [776, 120.0]
     rotation: 0
     state: true
 - name: epy_block_0
   id: epy_block
   parameters:
-    Pkt_len: '60'
+    Pkt_len: '1500'
     _source_code: "\"\"\"\nEmbedded Python Block: Byte Stream to Tagged Stream\n\"\
       \"\"\n\nimport numpy as np\nfrom gnuradio import gr\nimport pmt\n\n\"\"\"\n\
       State Definitions:\n    0: Idle\n    1: Send Preamble\n    2: Send Data\n  \
@@ -373,7 +374,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [224, 244.0]
+    coordinate: [248, 164.0]
     rotation: 0
     state: true
 - name: fft_filter_xxx_0_0_0
@@ -601,4 +602,4 @@ connections:
 
 metadata:
   file_format: 1
-  grc_version: 3.10.7.0
+  grc_version: 3.10.11.0
