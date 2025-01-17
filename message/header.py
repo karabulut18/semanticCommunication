@@ -1,10 +1,8 @@
-import struct
 from enum import Enum
 
 # Constants
-NAME_BUFFER_SIZE = 32*2
-FILE_BUFFER_SIZE = 32*4
-MAX_PACKET_SIZE  = 32*8
+NAME_BUFFER_SIZE = 128
+FILE_BUFFER_SIZE = 1024
 
 # Message Types
 class msg_type(Enum):
@@ -22,18 +20,16 @@ class Header:
         else: 
             self.msg_type = msg_type.value
 
-    def serialize(self):
-        return struct.pack('!QI', self.size, self.msg_type)  # 12 bytes: 8 for size and 4 for msg_type
+    def to_bytes(self):
+        # 12 bytes: 8 for size and 4 for msg_type
+        return  self.size.to_bytes(8, byteorder='big') + self.msg_type.to_bytes(4, byteorder='big')
 
     @staticmethod
     def get_size():
-        return struct.calcsize('!QI')
+        return 12
 
-    @staticmethod
-    def deserialize(data):
-        size, msg_type = struct.unpack('!QI', data)
-        return Header(size, msg_type)
-
-
-def PadData(data, size = MAX_PACKET_SIZE):
-    return data + b'\0' * (size - len(data)) # Pad with null bytes
+    @classmethod
+    def from_bytes(cls, data):
+        size = int.from_bytes(data[:8], byteorder='big')
+        msg_type = int.from_bytes(data[8:12], byteorder='big')
+        return cls(size, msg_type)

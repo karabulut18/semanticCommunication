@@ -55,7 +55,7 @@ class File_Transfer_Unit(object):
 
 
     def HandleFileMetaDataMessage(self, message):
-        file_name = message.file_name.decode('utf-8')
+        file_name = message.get_file_name()
         file_path = self.file_directory + '/' + file_name
         file_path = file_utl.expand_path(file_path)
         self.files[message.file_id] = File(file_name, file_path, message.file_id)
@@ -71,7 +71,8 @@ class File_Transfer_Unit(object):
         except Exception as e:
             LOGE(f"Error handling file content message {e}, file id {message.file_id}")
             return
-        file.writeContentToFile(message.content_buffer, message.file_index)
+        #message.debug_print()
+        file.writeContentToFile(message.get_content_buffer(), message.file_index)
 
     def sendFileContent(self, file_id):
         file = self.files[file_id]

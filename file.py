@@ -29,8 +29,6 @@ class File(object):
         return file_content, file_index
 
     def writeContentToFile(self, content, file_index):
-        #log(f"Writing content to file {self.file_name} with start index {self.file_index}")
-        #log(f"Content size {len(content)}")
         if(file_index > self.size):
             LOGE(f"File {self.file_name} index out of bounds")
             return

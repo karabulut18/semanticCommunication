@@ -8,7 +8,6 @@ import sys
 from file_transfer_unit import File_Transfer_Unit
 from logger import LOG, LOGE, initialize_logger
 from text import textMessage
-from header import PadData
 
 
 connection_protocol = 'tcp://'
@@ -42,11 +41,10 @@ class connection(object):
         self.FileTransferUnit = fileTransferUnit
 
     def send(self, message):
-        serialized_message  = message.serialize()
-        padded_message      = PadData(serialized_message)
+        serialized_message  = message.to_bytes()
         try:
-            self.socket.send(padded_message)
-            LOG(f"     Message: {padded_message}")
+            self.socket.send(serialized_message)
+            LOG(f"     Message: {serialized_message}")
             self.message_count += 1
             #log(f"Sent message of size {len(serialized_message)} message count {self.message_count}")
         except Exception as e:
@@ -76,7 +74,7 @@ if __name__ == '__main__':
     initialize_logger("zmq_pub")
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', help='Port number', type=int)
-    parser.add_argument('--heartbeatMode', action='store_false')
+    parser.add_argument('--heartbeatMode', action='store_true', help='Heartbeat mode')
     parser.add_argument('--file_directory', help='File directory')
     args = parser.parse_args()
     if args.port:
@@ -91,12 +89,12 @@ if __name__ == '__main__':
 
     connection = connection(port)
 
-    connection.heartbeatLoop()
-    '''
+    if args.heartbeatMode:
+        connection.heartbeatLoop()
+    else:
         file_transfer_unit = File_Transfer_Unit(file_directory)
-    file_transfer_unit.setConnection(connection)
-    connection.SetFileTransferUnit(file_transfer_unit)
-    file_transfer_unit.findFilesInDirectory()
-    time.sleep(5)
-    file_transfer_unit.sendAllFiles()
-    '''
+        file_transfer_unit.setConnection(connection)
+        connection.SetFileTransferUnit(file_transfer_unit)
+        file_transfer_unit.findFilesInDirectory()
+        time.sleep(1)
+        file_transfer_unit.sendAllFiles()

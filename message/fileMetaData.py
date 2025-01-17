@@ -1,4 +1,3 @@
-import struct
 from header import Header, msg_type, NAME_BUFFER_SIZE
 from logger import LOGE
 
@@ -8,38 +7,42 @@ class FileMetaData:
         self.header         = Header(0, msg_type.MSGTYPE_FILE_METADATA)
         self.file_size      = file_size
         self.file_id        = file_id
-        self.file_name_size = len(file_name)
         self.file_name      = file_name.encode('utf-8')
+        self.file_name_size = self.file_name.__sizeof__()
         self.header.size    = self.get_size()
 
+    def get_file_name(self):
+        return self.file_name.decode('utf-8')
+
     def get_size(self):
-        return Header.get_size() + struct.calcsize('!Q') + struct.calcsize('!I') + struct.calcsize('!Q') + self.file_name_size
+        return Header.get_size() + 20 + self.file_name_size
 
-    def serialize(self):
-        # ensure put a terminating null byte at the end of the file name
-        return (self.header.serialize() + 
-                struct.pack('!QI', self.file_size, self.file_id) + 
-                struct.pack('!Q', self.file_name_size) + 
-                self.file_name.ljust(self.file_name_size, b'\0'))
+    def to_bytes(self):
+        return (self.header.to_bytes() +
+                self.file_size.to_bytes(8, byteorder='big') +
+                self.file_id.to_bytes(4, byteorder='big') +
+                self.file_name_size.to_bytes(8, byteorder='big') +
+                self.file_name)
 
-    @staticmethod
-    def deserialize(data):
-        header_size         = Header.get_size()
-        header              = Header.deserialize(data[:header_size])
-        offset              = header_size
+    @classmethod
+    def from_bytes(cls, data):
+        offset = 0
+        header = Header.from_bytes(data[offset:offset + Header.get_size()])
+        offset += Header.get_size()
 
-        file_size, file_id  = struct.unpack('!QI', data[offset:offset + struct.calcsize('!Q') + struct.calcsize('!I')])
-        offset              += struct.calcsize('!QI')
+        file_size = int.from_bytes(data[offset:offset + 8], byteorder='big')
+        offset += 8
 
-        file_name_size      = struct.unpack('!Q', data[offset:offset + struct.calcsize('!Q')])[0]
-        offset              += struct.calcsize('!Q')
+        file_id = int.from_bytes(data[offset:offset + 4], byteorder='big')
+        offset += 4
 
-        if(file_name_size < 0):
-            LOGE(f"Invalid file name size {file_name_size}")
+        file_name_size = int.from_bytes(data[offset:offset + 8], byteorder='big')
+        offset += 8
+
+        try:
+            file_name = data[offset:offset + file_name_size]
+        except Exception as e:
+            LOGE(f"Error deserializing file name: {e}")
             return None
-        elif(file_name_size > NAME_BUFFER_SIZE):
-            LOGE(f"File name size {file_name_size} exceeds limit {NAME_BUFFER_SIZE}")
-            file_name_size = NAME_BUFFER_SIZE
 
-        file_name           = data[offset:offset + file_name_size].decode('utf-8')
-        return FileMetaData(file_name, file_size, file_id)
+        return cls(file_name.decode('utf-8'), file_size, file_id)

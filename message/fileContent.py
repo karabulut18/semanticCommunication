@@ -1,6 +1,5 @@
-import struct
 from header import Header, msg_type, FILE_BUFFER_SIZE
-from util.logger import LOG, LOGE
+from logger import LOG, LOGE, LOGP
 
 
 class FileContent:
@@ -9,51 +8,52 @@ class FileContent:
         self.file_id                = file_id
         self.msg_id                 = msg_id
         self.file_index             = file_index
-        self.content_buffer_size    = len(content_buffer)
         self.content_buffer         = content_buffer
+        self.content_buffer_size    = len(content_buffer)
         self.header.size            = self.get_size()
 
     def get_size(self):
-        return (Header.get_size() +
-                struct.calcsize('!I') +  # file_id
-                struct.calcsize('!I') +  # msg_id
-                struct.calcsize('!Q') +  # file_index
-                struct.calcsize('!Q') +  # content_buffer_size
-                self.content_buffer_size)  # content_buffer
+        return (Header.get_size() + 4 + 4 + 8 + 8 + self.content_buffer_size)
 
-    def serialize(self):
-        return (self.header.serialize() +
-                struct.pack('!I', self.file_id) +
-                struct.pack('!I', self.msg_id) +
-                struct.pack('!Q', self.file_index) +
-                struct.pack('!Q', self.content_buffer_size) +
-                self.content_buffer.ljust(self.content_buffer_size, b'\0'))
+    def to_bytes(self):
+        paded_content_buffer = self.content_buffer.ljust(FILE_BUFFER_SIZE, b'\0')
+        return (self.header.to_bytes() +
+                self.file_id.to_bytes(4, byteorder='big') +
+                self.msg_id.to_bytes(4, byteorder='big') +
+                self.file_index.to_bytes(8, byteorder='big') +
+                self.content_buffer_size.to_bytes(8, byteorder='big') +
+                paded_content_buffer)
 
-    @staticmethod
-    def deserialize(data):
-        offset  = 0
-        header  = Header.deserialize(data[offset:offset + Header.get_size()])
-        offset  += Header.get_size()
-        
-        file_id = struct.unpack('!I', data[offset:offset + struct.calcsize('!I')])[0]
-        offset  += struct.calcsize('!I')
+    def get_content_buffer(self):
+        return self.content_buffer[:self.content_buffer_size]
 
-        msg_id  = struct.unpack('!I', data[offset:offset + struct.calcsize('!I')])[0]
-        offset  += struct.calcsize('!I')
+    def debug_print(self):
+        LOG(f"File ID: {self.file_id}")
+        LOG(f"Message ID: {self.msg_id}")
+        LOG(f"File Index: {self.file_index}")
+        LOG(f"Content Buffer Size: {self.content_buffer_size}")
+        LOGP(f"Content Buffer: {self.content_buffer}")
 
-        file_index  = struct.unpack('!Q', data[offset:offset + struct.calcsize('!Q')])[0]
-        offset      += struct.calcsize('!Q')
+    @classmethod
+    def from_bytes(cls, data):
+        try:
+            offset = 0
+            header = Header.from_bytes(data[offset:offset + Header.get_size()])
+            offset += Header.get_size()
 
-        content_buffer_size = struct.unpack('!Q', data[offset:offset + struct.calcsize('!Q')])[0]
-        offset              += struct.calcsize('!Q')
+            file_id = int.from_bytes(data[offset:offset + 4], byteorder='big')
+            offset += 4
 
-        if(content_buffer_size < 0):
-            LOGE(f"Invalid content buffer size {content_buffer_size}")
+            msg_id = int.from_bytes(data[offset:offset + 4], byteorder='big')
+            offset += 4
+
+            file_index = int.from_bytes(data[offset:offset + 8], byteorder='big')
+            offset += 8
+
+            content_buffer_size = int.from_bytes(data[offset:offset + 8], byteorder='big')
+            offset += 8
+            content_buffer = data[offset:offset + content_buffer_size]
+            return cls(file_id, content_buffer, msg_id, file_index)
+        except Exception as e:
+            LOGE(f"Error deserializing content buffer: {e}")
             return None
-        elif(content_buffer_size > FILE_BUFFER_SIZE):
-            LOGE(f"Content buffer size {content_buffer_size} exceeds limit {FILE_BUFFER_SIZE}")
-            content_buffer_size = FILE_BUFFER_SIZE
-
-        content_buffer = data[offset:offset + content_buffer_size]
-
-        return FileContent(file_id, content_buffer, msg_id, file_index)

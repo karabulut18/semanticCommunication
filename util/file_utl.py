@@ -44,15 +44,23 @@ def get_files_in_dir(dir_path):
     return os.listdir(dir_path)
 
 def read_file_with_start_end_index(file_path, start, end):
-    with open(file_path, 'rb') as file:
+    with open(file_path, 'r') as file:
         file.seek(start)
         return file.read(end - start)
 
 def read_binary_file_with_start_end_index(file_path, start, end):
     with open(file_path, 'rb') as file:
+        file_size = os.path.getsize(file_path)
+        if start > file_size:
+            raise ValueError("Start index is beyond file size.")
         file.seek(start)
-        fileContent = file.read(end - start)
+        fileContent = file.read(min(end, file_size) - start)
         return fileContent
+
+def write_to_file_with_start_index(file_path, content, start):
+    with open(file_path, 'r+b') as file:  # 'r+b' to modify part of the file
+        file.seek(start)
+        file.write(content)
 
 def create_file(file_path):
     if file_exists(file_path):
@@ -63,11 +71,7 @@ def create_file(file_path):
         return True
     except:
         return False
-    
-def write_to_file_with_start_index(file_path, content, start):
-    with open(file_path, 'wb') as file:
-        file.seek(start)
-        file.write(content)
+
 
 def get_working_directory():
     return os.getcwd()

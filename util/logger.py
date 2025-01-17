@@ -48,16 +48,21 @@ class Logger(logging.Logger):
         now = datetime.now()
         return now.strftime("%H:%M:%S") + f".{now.microsecond // 1000:03d}"
 
-    def log(self, message):
+    def log(self, line):
         # log with timestamp and message, timestamp format: HH_mm_ss_msms
         timestamp = self.get_timestamp()
-        self.logfile.write(f"\t{timestamp}: {message}\n")
+        self.logfile.write(f"\t{timestamp}: {line}\n")
         self.logfile.flush()
 
-    def loge(self, message):
+    def loge(self, line):
         # log with timestamp and message, timestamp format: HHmmss
         timestamp = self.get_timestamp()
-        self.logfile.write(f"E\t{timestamp}: {message}\n")
+        self.logfile.write(f"E\t{timestamp}: {line}\n")
+        self.logfile.flush()
+
+    def logp(self, line):
+        # log plain message without timestamp
+        self.logfile.write(f"{line}\n")
         self.logfile.flush()
 
     def cleanup(self):
@@ -72,16 +77,23 @@ def initialize_logger(appName):
     return Logger(appName)
 
 # Global logging functions
-def LOG(message):
+def LOG(line):
     logger = Logger._instance
     if logger:
-        logger.log(message)
+        logger.log(line)
     else:
         raise RuntimeError("Logger not initialized")
 
-def LOGE(message):
+def LOGE(line):
     logger = Logger._instance
     if logger:
-        logger.loge(message)
+        logger.loge(line)
+    else:
+        raise RuntimeError("Logger not initialized")
+
+def LOGP(line):
+    logger = Logger._instance
+    if logger:
+        logger.logp(line)
     else:
         raise RuntimeError("Logger not initialized")

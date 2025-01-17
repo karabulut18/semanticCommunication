@@ -4,23 +4,20 @@ from logger import LOG
 class textMessage:
     def __init__(self, text):
         self.header = Header(0, msg_type.MSGTYPE_TEXT)
-        self.text = text
+        self.text = text.encode('utf-8')
         self.header.size = self.get_size()
 
     def get_size(self):
-        return self.header.get_size() + len(self.text)
+        return self.header.get_size() + self.text.__sizeof__()
 
-    def serialize(self):
-        return self.header.serialize() + self.text.encode('utf-8')
+    def to_bytes(self):
+        return self.header.to_bytes() + self.text
     
     def print_text(self):
-        LOG(self.text)
+        LOG(self.text.decode('utf-8'))
 
-    @staticmethod
-    def deserialize(data):
-        header = Header.deserialize(data[:Header.get_size()])
-        text = data[Header.get_size():]
-        # if text is already decoded, then return textMessage(text)
-        if isinstance(text, str):
-            return textMessage(text)
-        return textMessage(text.decode('utf-8'))
+    @classmethod
+    def from_bytes(cls, data):
+        header = Header.from_bytes(data[:Header.get_size()])
+        text = data[Header.get_size():header.size]
+        return cls(text.decode('utf-8'))

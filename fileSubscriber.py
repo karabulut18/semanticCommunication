@@ -54,15 +54,15 @@ class connection(object):
             self.ParseMessage(data)
     
     def ParseMessage(self, data):
-        header = Header.deserialize(data[:Header.get_size()])
+        header = Header.from_bytes(data[:Header.get_size()])
         message = data[:header.size]
         #log(f"Received message of type {header.msg_type} and size {header.size}")
         if header.msg_type == msg_type.MSGTYPE_TEXT.value:
-            self.HandleTextMessage(textMessage.deserialize(message))
+            self.HandleTextMessage(textMessage.from_bytes(message))
         elif header.msg_type == msg_type.MSGTYPE_FILE_METADATA.value:
-            self.fileTransferUnit.HandleFileMetaDataMessage(FileMetaData.deserialize(message))
+            self.fileTransferUnit.HandleFileMetaDataMessage(FileMetaData.from_bytes(message))
         elif header.msg_type == msg_type.MSGTYPE_FILE_CONTENT.value:
-            self.fileTransferUnit.HandleFileContentMessage(FileContent.deserialize(message))
+            self.fileTransferUnit.HandleFileContentMessage(FileContent.from_bytes(message))
         else:
             pass
             #LOGE(f"Unknown message type {header.msg_type}")
