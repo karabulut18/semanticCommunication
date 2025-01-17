@@ -1,8 +1,8 @@
-# Semantic Communication 
-a testbed for semantic communication development
+# Testbed for Semantic Communication 
+This repo is an example of building a testbed for semantic communication development by using gnu-radio.
 
-## environment setup
-gnuradio-companion is not working properly on conda macos, so if you care for your nerves do not try it. Set up a docker container.
+## environment setup (Optional)
+In order to run on macos environment follow Setup steps.
 
 Go to the links provided below.
 
