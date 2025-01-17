@@ -169,3 +169,7 @@ logs
 
 # Ignore all .py files under simulationChannel/
 simulationChannel/*.py
+
+sender_side_files
+
+receiver_side_files
