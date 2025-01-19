@@ -5,7 +5,7 @@ import zmq
 import argparse
 import sys
 from file_transfer_unit import File_Transfer_Unit
-from logger import LOG, LOGE, initialize_logger
+from logger import LOG, LOGE, initialize_logger, LOGP
 from header import Header, msg_type
 from text import textMessage
 from fileContent import FileContent
@@ -41,22 +41,29 @@ class connection(object):
         LOG(f"Connected to port {self.port}")
         LOG(f"Subscribed to all message types")
         LOG(f"Listening for messages")
-        self.left_over = b''
+        self.buffer = b''
 
     def setFileTransferUnit(self, fileTransferUnit):
         self.fileTransferUnit = fileTransferUnit
 
     def recv(self):
-        left_over = b''
         while True:
             data = self.socket.recv()
-            #LOG(f"received size {len(data)}- data: {data}") 
+            LOG(f"received size {len(data)}- data: {data}") 
             self.ParseMessage(data)
     
     def ParseMessage(self, data):
         header = Header.from_bytes(data[:Header.get_size()])
+        if self.buffer:
+            data = self.buffer + data
+            if len(data) > header.size:
+                self.buffer = data[header.size:]
+        if(len(data) < header.size):
+            self.buffer = data
+            return
+
         message = data[:header.size]
-        #log(f"Received message of type {header.msg_type} and size {header.size}")
+        LOGP(data)
         if header.msg_type == msg_type.MSGTYPE_TEXT.value:
             self.HandleTextMessage(textMessage.from_bytes(message))
         elif header.msg_type == msg_type.MSGTYPE_FILE_METADATA.value:
@@ -64,13 +71,17 @@ class connection(object):
         elif header.msg_type == msg_type.MSGTYPE_FILE_CONTENT.value:
             self.fileTransferUnit.HandleFileContentMessage(FileContent.from_bytes(message))
         else:
-            pass
-            #LOGE(f"Unknown message type {header.msg_type}")
-            #LOGE(f"     Message: {message}")
+            LOGE(f"Unknown message type {header.msg_type}")
+            LOGE(f"     Message: {message}")
+    
         return data[header.size:]
+
     def HandleTextMessage(self, message):
-        LOG("Received text message")
-        message.print_text()
+        try:
+            LOG("Received text message")
+            message.print_text()
+        except Exception as e:
+            LOG("error handling text message")
 
     def recvLoop(self):
         LOG("Starting receiver loop")
