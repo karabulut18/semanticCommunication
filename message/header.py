@@ -2,7 +2,7 @@ from enum import Enum
 
 # Constants
 NAME_BUFFER_SIZE = 128
-FILE_BUFFER_SIZE = 1024
+FILE_BUFFER_SIZE = 256
 
 # Message Types
 class msg_type(Enum):
@@ -33,3 +33,13 @@ class Header:
         size = int.from_bytes(data[:8], byteorder='big')
         msg_type = int.from_bytes(data[8:12], byteorder='big')
         return cls(size, msg_type)
+
+    @staticmethod
+    def IsMessageTypeValid(data):
+        if len(data) < Header.get_size():
+            return False
+        header = Header.from_bytes(data[:Header.get_size()])
+        if header.msg_type >= msg_type.MSGTYPE_MAX.value or header.msg_type <= 0:
+            return False
+        else:
+            return True

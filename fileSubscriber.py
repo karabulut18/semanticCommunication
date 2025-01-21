@@ -49,21 +49,23 @@ class connection(object):
     def recv(self):
         while True:
             data = self.socket.recv()
-            LOG(f"received size {len(data)}- data: {data}") 
             self.ParseMessage(data)
     
     def ParseMessage(self, data):
-        header = Header.from_bytes(data[:Header.get_size()])
-        if self.buffer:
+        if self.buffer != b'' and not Header.IsMessageTypeValid(data):
             data = self.buffer + data
-            if len(data) > header.size:
-                self.buffer = data[header.size:]
-        if(len(data) < header.size):
-            self.buffer = data
+        elif self.buffer == b'' and not Header.IsMessageTypeValid(data):
             return
 
+        self.buffer = b''
+        header = Header.from_bytes(data[:Header.get_size()])
+
+        if len(data) < header.size:
+            self.buffer = data
+            return
         message = data[:header.size]
-        LOGP(data)
+        self.buffer = data[header.size:]
+
         if header.msg_type == msg_type.MSGTYPE_TEXT.value:
             self.HandleTextMessage(textMessage.from_bytes(message))
         elif header.msg_type == msg_type.MSGTYPE_FILE_METADATA.value:
@@ -71,10 +73,8 @@ class connection(object):
         elif header.msg_type == msg_type.MSGTYPE_FILE_CONTENT.value:
             self.fileTransferUnit.HandleFileContentMessage(FileContent.from_bytes(message))
         else:
-            LOGE(f"Unknown message type {header.msg_type}")
             LOGE(f"     Message: {message}")
     
-        return data[header.size:]
 
     def HandleTextMessage(self, message):
         try:
@@ -96,11 +96,16 @@ class connection(object):
         self.context.term()
 
 if __name__ == '__main__':
-    initialize_logger("zmq_sink")
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', help='Port number', type=int)
     parser.add_argument('--file_directory', help='File directory')
+    parser.add_argument('--debug', help='Debug mode', action='store_true')
     args = parser.parse_args()
+    if args.debug:
+        initialize_logger("zmq_sink", True)
+    else:
+        initialize_logger("zmq_sink")
+
     if args.port:
         port  = args.port
     else:
