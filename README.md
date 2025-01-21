@@ -38,3 +38,8 @@ I chnaged docker container command as:
 EPB: File Source to Tagged Stream block is altered to integrate with the filePublisher in pkt_xmt.grc
 A Zmq sub source is added and EPB: Byte to Tagged Stream block is connected to it.
 
+## Similarity Check
+[myers' diff](https://www.nathaniel.ai/myers-diff/) algrotihm has been used
+
+
+
