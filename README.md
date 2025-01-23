@@ -1,7 +1,7 @@
 # Testbed for Semantic Communication 
 This repo is an example of building a testbed for semantic communication development by using gnu-radio.
 
-## environment setup (Optional)
+## Environment setup
 In order to run on macos environment follow Setup steps.
 
 Go to the links provided below.
@@ -33,20 +33,29 @@ I chnaged docker container command as:
  > <_container tag>
 
 # Channel impairment simulation graph
-[file transfer using packet and BPSK](https://wiki.gnuradio.org/index.php?title=File_transfer_using_Packet_and_BPSK)
+
 This simulation channel consists of three components: pkt_xmt, chan_loopback, and pkt_rcv.
 
-pkt_xmt: This component converts a byte stream into a BPSK signal and sends a preamble, enabling synchronization at the receiver (pkt_rcv). In the original example, the EPB: File Source to Tagged Stream block reads files, appends them with a pkt_len tag, and sends the preamble. This block has been modified to integrate with a filePublisher for better abstraction, simplifying the implementation of encoder-decoder models. The updated block is named EPB: Byte to Tagged Stream. The pkt_xmt now receives messages via a ZMQ Publisher (zmq_pub) source block and converts them to a BPSK signal.
+1- pkt_xmt: This component converts a byte stream into a BPSK signal and sends a preamble, enabling synchronization at the receiver (pkt_rcv). In the original example, the EPB: File Source to Tagged Stream block reads files, appends them with a pkt_len tag, and sends the preamble. This block has been modified to integrate with a filePublisher for better abstraction, simplifying the implementation of encoder-decoder models. The updated block is named EPB: Byte to Tagged Stream. The pkt_xmt now receives messages via a ZMQ Publisher (zmq_pub) source block and converts them to a BPSK signal.
 
-chan_loopback: This flowgraph allows for the simulation of channel impairments. It includes a configurable noise voltage parameter to emulate real-world channel conditions.
+2- chan_loopback: This flowgraph allows for the simulation of channel impairments. It includes a configurable noise voltage parameter to emulate real-world channel conditions.
 
-pkt_rcv: This component converts the BPSK signal back into a byte stream and publishes the messages using a ZMQ Publisher Sink (zmq_pub_sink) block.
+3- pkt_rcv: This component converts the BPSK signal back into a byte stream and publishes the messages using a ZMQ Publisher Sink (zmq_pub_sink) block.
 
-# File Transfer Protocol
-Two applications 
+The original example provided by Barry Duggan: [file transfer using packet and BPSK](https://wiki.gnuradio.org/index.php?title=File_transfer_using_Packet_and_BPSK).
 
-## Similarity Check
-[myers' diff](https://www.nathaniel.ai/myers-diff/) algrotihm has been used
+# File Transfer Sytem
+The file transfer system consists of two parts: filePublisher and fileSubscriber.
+
+1- filePublisher: This component reads files from disk and sends them to the pkt_xmt for further processing.
+
+2- fileSubscriber: This component receives file messages from the pkt_rcv and writes them back to disk.
+
+This architecture provides a flexible foundation, allowing for the future integration of an encoder-decoder model between the filePublisher and fileSubscriber.
+
+
+# Result Comparision
+For similarity check [myers' diff](http://www.xmailserver.org/diff2.pdf) algrotihm has been used. 
 
 
 
