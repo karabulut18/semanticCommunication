@@ -34,9 +34,16 @@ I chnaged docker container command as:
 
 # Channel impairment simulation graph
 [file transfer using packet and BPSK](https://wiki.gnuradio.org/index.php?title=File_transfer_using_Packet_and_BPSK)
+This simulation channel consists of three components: pkt_xmt, chan_loopback, and pkt_rcv.
 
-EPB: File Source to Tagged Stream block is altered to integrate with the filePublisher in pkt_xmt.grc
-A Zmq sub source is added and EPB: Byte to Tagged Stream block is connected to it.
+pkt_xmt: This component converts a byte stream into a BPSK signal and sends a preamble, enabling synchronization at the receiver (pkt_rcv). In the original example, the EPB: File Source to Tagged Stream block reads files, appends them with a pkt_len tag, and sends the preamble. This block has been modified to integrate with a filePublisher for better abstraction, simplifying the implementation of encoder-decoder models. The updated block is named EPB: Byte to Tagged Stream. The pkt_xmt now receives messages via a ZMQ Publisher (zmq_pub) source block and converts them to a BPSK signal.
+
+chan_loopback: This flowgraph allows for the simulation of channel impairments. It includes a configurable noise voltage parameter to emulate real-world channel conditions.
+
+pkt_rcv: This component converts the BPSK signal back into a byte stream and publishes the messages using a ZMQ Publisher Sink (zmq_pub_sink) block.
+
+# File Transfer Protocol
+Two applications 
 
 ## Similarity Check
 [myers' diff](https://www.nathaniel.ai/myers-diff/) algrotihm has been used
