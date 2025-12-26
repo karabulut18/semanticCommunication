@@ -5,12 +5,11 @@ import zmq
 import argparse
 import sys
 from file_transfer_unit import File_Transfer_Unit
-from logger import LOG, LOGE, initialize_logger
+from logger import LOG, LOGE, initialize_logger, LOGP
 from header import Header, msg_type
 from text import textMessage
 from fileContent import FileContent
 from fileMetaData import FileMetaData
-
 
 connection_protocol = 'tcp://'
 connection_address  = 'localhost:'
@@ -20,8 +19,6 @@ subscription        = b""
 def signal_handler(sig, frame):
     print('Exiting program...')
     sys.exit(0)
-
-signal.signal(signal.SIGINT, signal_handler)
 
 class Connection(object):
     """
@@ -36,7 +33,6 @@ class Connection(object):
         self.socket.setsockopt(zmq.SUBSCRIBE, subscription)
 
         try:
-            #self.socket.connect('tcp://127.0.0.1:' + str(self.port))
             self.socket.connect(connection_string + str(self.port))
         except Exception as e:
             LOGE(f"Error connecting to port {self.port} {e}")
@@ -44,22 +40,32 @@ class Connection(object):
         LOG(f"Connected to port {self.port}")
         LOG(f"Subscribed to all message types")
         LOG(f"Listening for messages")
-        self.left_over = b''
+        self.buffer = b''
 
     def setFileTransferUnit(self, fileTransferUnit):
         self.fileTransferUnit = fileTransferUnit
 
     def recv(self):
-        left_over = b''
         while True:
             data = self.socket.recv()
-            #LOG(f"received size {len(data)}- data: {data}") 
             self.ParseMessage(data)
     
     def ParseMessage(self, data):
+        if self.buffer != b'' and not Header.IsMessageTypeValid(data):
+            data = self.buffer + data
+        elif self.buffer == b'' and not Header.IsMessageTypeValid(data):
+            return
+
+        self.buffer = b''
         header = Header.from_bytes(data[:Header.get_size()])
+
+        if len(data) < header.size:
+            self.buffer = data
+            return
+        
         message = data[:header.size]
-        #log(f"Received message of type {header.msg_type} and size {header.size}")
+        self.buffer = data[header.size:]
+
         if header.msg_type == msg_type.MSGTYPE_TEXT.value:
             self.HandleTextMessage(textMessage.from_bytes(message))
         elif header.msg_type == msg_type.MSGTYPE_FILE_METADATA.value:
@@ -67,13 +73,14 @@ class Connection(object):
         elif header.msg_type == msg_type.MSGTYPE_FILE_CONTENT.value:
             self.fileTransferUnit.HandleFileContentMessage(FileContent.from_bytes(message))
         else:
-            pass
-            #LOGE(f"Unknown message type {header.msg_type}")
-            #LOGE(f"     Message: {message}")
-        return data[header.size:]
+            LOGE(f"Unknown message type at message content: {message}")
+
     def HandleTextMessage(self, message):
-        LOG("Received text message")
-        message.print_text()
+        try:
+            LOG("Received text message")
+            message.print_text()
+        except Exception as e:
+            LOG(f"Error handling text message: {e}")
 
     def recvLoop(self):
         LOG("Starting receiver loop")
@@ -81,29 +88,33 @@ class Connection(object):
         while True:
             self.message_count += 1
             self.recv()
-            
 
     def __del__(self):
         self.socket.close()
         self.context.term()
 
-
 if __name__ == '__main__':
-    initialize_logger("zmq_sink")
     parser = argparse.ArgumentParser(description="File Subscriber (Receiver) for Semantic Comm Testbed")
-    parser.add_argument('--port', help='Port number to connect to (default: 5555)', type=int, default=5555)
-    parser.add_argument('--file_directory', help='Directory to save received files (default: ./receiver_side_files)', default='./receiver_side_files')
+    parser.add_argument('--port', help='Port number', type=int, default=5555)
+    parser.add_argument('--file_directory', help='File directory', default='./receiver_side_files')
+    parser.add_argument('--debug', help='Debug mode', action='store_true')
     args = parser.parse_args()
-    
+
+    if args.debug:
+        initialize_logger("zmq_sink", True)
+    else:
+        initialize_logger("zmq_sink")
+
     port  = args.port
     file_directory = args.file_directory
 
     LOG(f"Initializing Receiver for port {port} saving to {file_directory}")
 
-    fileTransferUnit = File_Transfer_Unit(file_directory)
+    signal.signal(signal.SIGINT, signal_handler)
+
+    file_transfer_unit = File_Transfer_Unit(file_directory)
     conn = Connection(port)
-    fileTransferUnit.setConnection(conn)
-    conn.setFileTransferUnit(fileTransferUnit)
+    file_transfer_unit.setConnection(conn)
+    conn.setFileTransferUnit(file_transfer_unit)
     
     conn.recvLoop()
-

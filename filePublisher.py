@@ -8,37 +8,29 @@ import sys
 from file_transfer_unit import File_Transfer_Unit
 from logger import LOG, LOGE, initialize_logger
 from text import textMessage
-
+from threading import Thread
 
 connection_protocol = 'tcp://'
 connection_address = '*:'
 connection_string = connection_protocol + connection_address
-
-def signal_handler(sig, frame):
-    """Handles system signals (like SIGINT) to exit gracefully."""
-    print('Exiting program...')
-    sys.exit(0)
-
-signal.signal(signal.SIGINT, signal_handler)
 
 class Connection(object):
     """
     Manages the ZeroMQ PUB socket for sending files.
     """
     def __init__(self, port):
-        self.port = port
-        self.context = zmq.Context()
-        self.socket = self.context.socket(zmq.PUB)
-        self.socket.setsockopt(zmq.SNDBUF, 8)
-        # enable pass tags
-        #self.socket.setsockopt(zmq.ZMQ_PASS_TAGS, 1)
+        self.port       = port
+        self.context    = zmq.Context()
+        self.socket     = self.context.socket(zmq.PUB)
+        # self.socket.setsockopt(zmq.SNDBUF, 128)
         try:
             self.socket.bind(connection_string + str(self.port))
         except Exception as e:
             LOGE(f"Error connecting to port {self.port} {e}")
             exit()
         LOG(f"Connected to port {self.port}")
-        self.message_count = 0
+        self.message_count  = 0
+        self.running        = False
 
     def SetFileTransferUnit(self, fileTransferUnit):
         self.FileTransferUnit = fileTransferUnit
@@ -47,9 +39,7 @@ class Connection(object):
         serialized_message  = message.to_bytes()
         try:
             self.socket.send(serialized_message)
-            LOG(f"     Message: {serialized_message}")
             self.message_count += 1
-            #log(f"Sent message of size {len(serialized_message)} message count {self.message_count}")
         except Exception as e:
             LOGE(f"Error sending message: {e}")
 
@@ -59,37 +49,54 @@ class Connection(object):
         except Exception as e:
             LOGE(f"Error sending message: {e}")
 
+    def startHeartbeat(self):
+        self.heartbeat_thread = Thread(target=self.heartbeatLoop)
+        self.heartbeat_thread.start()
+
     def __del__(self):
+        self.running = False
         self.socket.close()
         self.context.term()
     
     def heartbeatLoop(self):
         count = 0
-        while True:
+        self.running = True
+        while self.running:
             heartbeat = textMessage('Heartbeat ' + str(count))
             LOG(f"Sending heartbeat {count}, size {heartbeat.get_size()}")
             count += 1
             self.send(heartbeat)
             time.sleep(1)
-
+  
+    def signal_handler(self, sig, frame):
+        print('Exiting program...')
+        self.running = False
+        sys.exit(0)
 
 if __name__ == '__main__':
-    # Access command-line arguments
-    initialize_logger("zmq_pub")
     parser = argparse.ArgumentParser(description="File Publisher (Sender) for Semantic Comm Testbed")
-    parser.add_argument('--port', help='Port number to bind to (default: 5555)', type=int, default=5555)
-    parser.add_argument('--heartbeatMode', action='store_true', help='Run in heartbeat mode for testing connectivity')
-    parser.add_argument('--file_directory', help='Directory containing files to send', default='./sender_side_files')
+    parser.add_argument('--port', help='Port number', type=int, default=5555)
+    parser.add_argument('--heartbeatMode', action='store_true', help='Heartbeat mode')
+    parser.add_argument('--file_directory', help='File directory', default='./sender_side_files')
+    parser.add_argument('--debug', help='Debug mode', action='store_true')
     args = parser.parse_args()
+
+    if args.debug:
+        initialize_logger("zmq_pub", True)
+    else:
+        initialize_logger("zmq_pub")
 
     port = args.port
     file_directory = args.file_directory
 
     conn = Connection(port)
+    signal.signal(signal.SIGINT, conn.signal_handler)
 
     if args.heartbeatMode:
         conn.heartbeatLoop()
     else:
+        conn.startHeartbeat()
+        time.sleep(1) # Reduced sleep to be more responsive
         file_transfer_unit = File_Transfer_Unit(file_directory)
         file_transfer_unit.setConnection(conn)
         conn.SetFileTransferUnit(file_transfer_unit)
@@ -100,4 +107,3 @@ if __name__ == '__main__':
         
         LOG("Starting transmission...")
         file_transfer_unit.sendAllFiles()
-

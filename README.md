@@ -9,38 +9,34 @@ This repository provides an infrastructure to transport files through a simulate
 **Core Architecture:**
 `[Sender App (Python)] --> [ZMQ PUB] --> [GNU Radio Transmitter] --(Channel)--> [GNU Radio Receiver] --> [ZMQ SUB] --> [Receiver App (Python)]`
 
-### Key Features
-- **Decoupled Design**: Run your AI/ML models in Python without being tightly bound to GNU Radio's scheduler.
-- **Robust Protocol**: Custom byte-level framing protocol for file metadata and content.
-- **Impairment Simulation**: Uses GNU Radio to simulate channel noise, fading, and packet loss.
-- **Flow Control**: Basic flow control mechanisms to handle backpressure between layers.
+This architecture provides a flexible foundation, allowing for the future integration of an encoder-decoder model between the `filePublisher` and `fileSubscriber`.
 
 ## 📂 Repository Structure
 
-- **`filePublisher.py`**: The "Sender" application. Reads files, packetizes them (Metadata/Content), and publishes to the channel.
-- **`fileSubscriber.py`**: The "Receiver" application. Listens for incoming packets, reconstructs files, and saves them to disk.
-- **`file_transfer_unit.py`**: Logic for chunking files, managing state, and handling file I/O.
-- **`simulationChannel/`**: Contains the GNU Radio Companion (`.grc`) flowgraphs.
-  - `pkt_xmt.grc`: Transmitter flowgraph (accepts ZMQ, modulates, adds channel effects).
-  - `pkt_rcv.grc`: Receiver flowgraph (demodulates, forwards to ZMQ).
-- **`sender_side_files/`** & **`receiver_side_files/`**: default directories for input/output files.
+### Python Application Layer
+- **`filePublisher.py`**: Reads files from disk and sends them to the `pkt_xmt` block via ZMQ.
+- **`fileSubscriber.py`**: Receives file messages from the `pkt_rcv` block and reconstructs them on disk.
+- **`file_transfer_unit.py`**: Logic for chunking files, managing metadata, and handling file I/O.
+- **`myers_diff.py`**: Implements the [Myers' Diff](http://www.xmailserver.org/diff2.pdf) algorithm for binary similarity comparison between sent and received files.
+
+### GNU Radio Physical Layer (`simulationChannel/`)
+The simulation channel consists of three main components:
+1.  **`pkt_xmt.grc`**: Converts a byte stream (from ZMQ Publisher source) into a BPSK signal. It has been modified from standard examples to use a "Byte to Tagged Stream" approach for better abstraction.
+2.  **`chan_loopback.grc`**: Simulates channel impairments with configurable noise voltage to emulate real-world conditions.
+3.  **`pkt_rcv.grc`**: Demodulates the BPSK signal back into a byte stream and forwards it via ZMQ Publisher Sink.
 
 ## 🛠️ Setup & Installation
 
-### Prerequisities
+### Prerequisites
 - **Python 3.8+**
 - **GNU Radio 3.8+** (or use the Docker setup below)
 - **ZeroMQ** (`pyzmq`)
 
-### macOS Setup (Docker Recommended)
-Running GNU Radio natively on macOS can be challenging (drivers, X11, etc.). It is recommended to use a Docker container.
+### macOS / Linux Setup (Docker Recommended)
+Running GNU Radio natively on macOS can be challenging. It is highly recommended to use a Docker container for the signal processing layer.
 
-1.  **Install Docker & XQuartz** (for GUI support).
-2.  **Pull the Image**:
-    ```bash
-    docker pull marriedgorillas/gnuradio-non-root
-    ```
-3.  **Run Container**:
+1.  **Install Docker & XQuartz** (for GUI support on macOS).
+2.  **Run Container**:
     ```bash
     docker run -dit \
       --name gnuradio-container \
@@ -51,13 +47,11 @@ Running GNU Radio natively on macOS can be challenging (drivers, X11, etc.). It 
       --volume $(pwd):/home/gnuradio/persistent \
       marriedgorillas/gnuradio-non-root
     ```
-    *(Note check `xhost` commands in legacy notes if GUI doesn't appear)*
 
 ## 🚦 Usage
 
 1.  **Start the Channel simulation**:
-    Open `simulationChannel/pkt_xmt.grc` (and `pkt_rcv` if separate) in GNU Radio Companion and run them.
-    *Alternatively, run the generated python scripts directly.*
+    Open `simulationChannel/pkt_xmt.grc` in GNU Radio Companion and run the flowgraph.
 
 2.  **Start the Receiver**:
     ```bash
@@ -68,16 +62,20 @@ Running GNU Radio natively on macOS can be challenging (drivers, X11, etc.). It 
     ```bash
     python3 filePublisher.py --port 5555 --file_directory ./sender_side_files
     ```
-    The sender will automatically detect files in the folder and begin transmission.
+
+4.  **Compare Results**:
+    ```bash
+    python3 myers_diff.py ./sender_side_files/test.txt ./receiver_side_files/test.txt
+    ```
 
 ## 🔮 Future Work & Concepts
 
 The original vision for this project was to implement a **Semantic Autoencoder**:
-- **Encoder**: Use **BLIP-2** to generate dense semantic captions of images, followed by text embedding.
-- **Decoder**: Use **Segment Anything** or Stable Diffusion to reconstruct the image from the received semantic tokens.
-This infrastructure was designed to carry those semantic tokens instead of raw file bytes, enabling extreme compression for specific tasks.
+- **Encoder**: Use **BLIP-2** to generate dense semantic captions of images.
+- **Decoder**: Use **Segment Anything** or Stable Diffusion to reconstruct images from received semantic tokens.
+This infrastructure is designed to carry those semantic tokens, enabling extreme compression for specific tasks.
 
 ## ⚠️ Known Limitations
 - **Platform**: Native macOS support for GNU Radio is experimental.
-- **Protocol**: The custom framing protocol currently uses fixed padding which may result in overhead.
-- **Flow Control**: Relies partially on basic sleep timers; production use should implement robust ARQ.
+- **Protocol**: Custom framing currently uses fixed padding.
+- **Flow Control**: Uses basic sleep timers; production use requires robust ARQ.

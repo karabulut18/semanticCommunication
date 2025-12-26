@@ -8,7 +8,7 @@ class textMessage:
         self.header.size = self.get_size()
 
     def get_size(self):
-        return self.header.get_size() + self.text.__sizeof__()
+        return self.header.get_size() + len(self.text)
 
     def to_bytes(self):
         return self.header.to_bytes() + self.text

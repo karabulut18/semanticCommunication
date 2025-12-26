@@ -1,5 +1,5 @@
 from header import Header, msg_type, FILE_BUFFER_SIZE
-from logger import LOG, LOGE, LOGP
+from logger import LOG, LOGE, LOGP, LOGD
 
 
 class FileContent:
@@ -34,14 +34,19 @@ class FileContent:
         LOG(f"Message ID: {self.msg_id}")
         LOG(f"File Index: {self.file_index}")
         LOG(f"Content Buffer Size: {self.content_buffer_size}")
-        LOGP(f"Content Buffer: {self.content_buffer}")
+        LOGD(f"Content Buffer: {self.content_buffer}")
 
     @classmethod
     def from_bytes(cls, data):
         try:
             offset = 0
+            if len(data) < Header.get_size():
+                raise Exception("data is too short to contain the header")
+
             header = Header.from_bytes(data[offset:offset + Header.get_size()])
             offset += Header.get_size()
+            if len(data) < header.size:
+                raise Exception("data is too short to contain the message")
 
             file_id = int.from_bytes(data[offset:offset + 4], byteorder='big')
             offset += 4
@@ -54,8 +59,13 @@ class FileContent:
 
             content_buffer_size = int.from_bytes(data[offset:offset + 8], byteorder='big')
             offset += 8
+            if len(data) < offset + content_buffer_size:
+                raise Exception("data is too short to contain the content buffer")
+
             content_buffer = data[offset:offset + content_buffer_size]
+            content_buffer.strip(b'\0')
             return cls(file_id, content_buffer, msg_id, file_index)
+    
         except Exception as e:
             LOGE(f"Error deserializing content buffer: {e}")
             return None

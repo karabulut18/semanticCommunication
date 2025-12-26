@@ -45,4 +45,4 @@ class FileMetaData:
             LOGE(f"Error deserializing file name: {e}")
             return None
 
-        return cls(file_name.decode('utf-8'), file_size, file_id)
+        return cls(file_name.decode('utf-8', errors= 'replace'), file_size, file_id)

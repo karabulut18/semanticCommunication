@@ -6,18 +6,19 @@ import atexit
 
 class Logger(logging.Logger):
     _instance = None
-    def __new__(cls, appName, *args, **kwargs):
+    def __new__(cls, appName, debug, *args, **kwargs):
         if not cls._instance:
             cls._instance = super().__new__(cls)
             cls._instance._initialized = False
         return cls._instance
 
-    def __init__(self, appName):
+    def __init__(self, appName, debug_mode = False):
         if self._initialized:
             return
         super().__init__(appName)
         self._initialized = True
         self.appName = appName
+        self.debug_mode = debug_mode
 
         # open file for logging with timestamp format: yy_MM_dd-HH_mm
         timestamp   = time.strftime("%y_%m_%d_%H_%M")
@@ -65,6 +66,12 @@ class Logger(logging.Logger):
         self.logfile.write(f"{line}\n")
         self.logfile.flush()
 
+    def logd(self, line):
+        # log with timestamp and message, timestamp format: HHmmss
+        timestamp = self.get_timestamp()
+        self.logfile.write(f"D\t{timestamp}: {line}\n")
+        self.logfile.flush()
+
     def cleanup(self):
         if hasattr(self, 'logfile'):
             # log that logger is closing
@@ -73,8 +80,8 @@ class Logger(logging.Logger):
             self.logfile.close()
 
 # Initialize the logger instance
-def initialize_logger(appName):
-    return Logger(appName)
+def initialize_logger(appName, debug_mode = False):
+    return Logger(appName, debug_mode)
 
 # Global logging functions
 def LOG(line):
@@ -95,5 +102,15 @@ def LOGP(line):
     logger = Logger._instance
     if logger:
         logger.logp(line)
+    else:
+        raise RuntimeError("Logger not initialized")
+
+def LOGD(line):
+    logger = Logger._instance
+    if logger:
+        if logger.debug_mode:
+            logger.logd(line)
+        else:
+            pass # do nothing
     else:
         raise RuntimeError("Logger not initialized")

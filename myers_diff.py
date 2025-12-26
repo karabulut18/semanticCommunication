@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 
-import argparse
+# Myers' Diff Algorithm for Comparing Binary Files
+# The Myers' diff algorithm is a linear space algorithm for comparing two sequences.
+# It is commonly used in version control systems to track changes in text files.
 
+import argparse
+from logger import initialize_logger, LOG, LOGE
 
 def myers_diff(seq1, seq2):
     """
     Myers' diff algorithm for comparing two sequences (binary or text).
-    Returns the edits required to transform seq1 into seq2.
+    Returns the edits and the number of matched bytes.
     """
     n = len(seq1)
     m = len(seq2)
@@ -36,14 +40,14 @@ def myers_diff(seq1, seq2):
             if x >= n and y >= m:
                 return backtrack(trace, seq1, seq2, n, m)
 
-    return []  # Should not reach here
-
+    return [], 0  # Should not reach here
 
 def backtrack(trace, seq1, seq2, n, m):
     """
-    Backtracks through the trace to construct the edit script.
+    Backtracks through the trace to construct the edit script and count matches.
     """
     edits = []
+    matches = 0
     x, y = n, m
 
     for d in range(len(trace) - 1, -1, -1):
@@ -51,27 +55,27 @@ def backtrack(trace, seq1, seq2, n, m):
         k = x - y
         prev_k = k + 1 if k == -d or (k != d and v[k - 1] < v[k + 1]) else k - 1
         prev_x = v[prev_k]
-        prev_y = prev_x - prev_k
+        # prev_y = prev_x - prev_k
 
-        while x > prev_x and y > prev_y:
+        while x > prev_x and y > (prev_x - prev_k):
             edits.append(("MATCH", x - 1, y - 1))  # Matching bytes
+            matches += 1  # Count the matches
             x -= 1
             y -= 1
 
         if x > prev_x:
             edits.append(("DELETE", x - 1))  # Byte deleted from seq1
             x -= 1
-        elif y > prev_y:
+        elif y > (prev_x - prev_k):
             edits.append(("INSERT", y - 1))  # Byte inserted into seq2
             y -= 1
 
-    return edits[::-1]  # Reverse to get the correct order
+    return edits[::-1], matches
 
-
-def binary_diff(file1_path, file2_path):
+def binary_similarity(file1_path, file2_path):
     """
     Compares two binary files using Myers' Diff Algorithm.
-    Returns a list of differences (edits).
+    Returns the similarity percentage.
     """
     try:
         with open(file1_path, "rb") as f1, open(file2_path, "rb") as f2:
@@ -79,33 +83,44 @@ def binary_diff(file1_path, file2_path):
             content2 = f2.read()
 
         # Perform Myers' Diff
-        edits = myers_diff(content1, content2)
-        return edits
+        edits, matches = myers_diff(content1, content2)
+
+        # Calculate similarity percentage
+        similarity = (matches / len(content1)) * 100 if content1 else 0
+
+        return similarity, edits
 
     except FileNotFoundError as e:
         print(f"Error: {e}")
-        return None
+        return None, None
     except Exception as e:
         print(f"Unexpected error: {e}")
-        return None
-
+        return None, None
 
 def main():
-    parser = argparse.ArgumentParser(description="Myers' Diff Algorithm")
-    parser.add_argument("file1", help="Path to the first file")
-    parser.add_argument("file2", help="Path to the second file")
+    """
+    Main function to parse command-line arguments and run the Myers' Diff Algorithm.
+    """
+    initialize_logger("myers_diff")
+    LOG("Starting Myers' Diff Algorithm")
+    parser = argparse.ArgumentParser(description="Myers' Diff Algorithm for Comparing Binary Files")
+    parser.add_argument("file1", help="Path to the first binary file")
+    parser.add_argument("file2", help="Path to the second binary file")
     args = parser.parse_args()
 
-    differences = binary_diff(args.file1, args.file2)
-    if differences is not None:
+    similarity, differences = binary_similarity(args.file1, args.file2)
+    if similarity is not None:
+        LOG(f"Similarity: {similarity:.2f}%")
+        LOG("Differences:")
         for diff in differences:
             if diff[0] == "MATCH":
-                print(f"Match at File1[{diff[1]}], File2[{diff[2]}]")
+                # print(f"Match: File1[{diff[1]}] == File2[{diff[2]}]")
+                pass
             elif diff[0] == "DELETE":
-                print(f"Delete at File1[{diff[1]}]")
+                LOGE(f"Delete: Byte {diff[1]} in File1 is missing in File2")
             elif diff[0] == "INSERT":
-                print(f"Insert at File2[{diff[1]}]")
+                LOGE(f"Insert: Byte {diff[1]} in File2 is new compared to File1")
+    LOG("Completed Myers' Diff Algorithm")
 
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
