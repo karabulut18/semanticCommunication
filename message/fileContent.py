@@ -16,6 +16,8 @@ class FileContent:
         return (Header.get_size() + 4 + 4 + 8 + 8 + self.content_buffer_size)
 
     def to_bytes(self):
+        # Pad the content to a fixed size. Note: connection logic may transmit these padding bytes,
+        # but the receiver strips them based on the header size/parsing logic.
         paded_content_buffer = self.content_buffer.ljust(FILE_BUFFER_SIZE, b'\0')
         return (self.header.to_bytes() +
                 self.file_id.to_bytes(4, byteorder='big') +

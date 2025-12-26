@@ -6,6 +6,10 @@ from fileMetaData import FileMetaData
 from fileContent import FileContent
 
 class File_Transfer_Unit(object):
+    """
+    Manages the high-level logic for file discovery, chunking, and reconstruction.
+    Acts as the bridge between the file system and the connection layer.
+    """
     def __init__(self, file_directory):
         file_dir = file_utl.convert_relative_path_to_absolute_path(file_directory)
         self.file_directory = file_dir
@@ -25,11 +29,11 @@ class File_Transfer_Unit(object):
         for file in files:
             file_path = self.file_directory + '/' + file
             file_path = file_utl.expand_path(file_path)
-            fileObejct = File(file, file_path, self.fileTransferIndex)
+            fileObject = File(file, file_path, self.fileTransferIndex)
             fileSize = file_utl.get_file_size(file_path)
-            fileObejct.setFileSize(fileSize)
+            fileObject.setFileSize(fileSize)
             LOG(f"File {file} found with size {fileSize}")
-            self.files[self.fileTransferIndex] = fileObejct
+            self.files[self.fileTransferIndex] = fileObject
             self.fileTransferIndex += 1
 
     def sendMetaData(self, file_id):

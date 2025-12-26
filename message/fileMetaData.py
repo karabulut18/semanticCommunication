@@ -8,7 +8,7 @@ class FileMetaData:
         self.file_size      = file_size
         self.file_id        = file_id
         self.file_name      = file_name.encode('utf-8')
-        self.file_name_size = self.file_name.__sizeof__()
+        self.file_name_size = len(self.file_name)
         self.header.size    = self.get_size()
 
     def get_file_name(self):

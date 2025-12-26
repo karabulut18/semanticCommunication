@@ -14,14 +14,17 @@ connection_protocol = 'tcp://'
 connection_address = '*:'
 connection_string = connection_protocol + connection_address
 
-
 def signal_handler(sig, frame):
+    """Handles system signals (like SIGINT) to exit gracefully."""
     print('Exiting program...')
     sys.exit(0)
 
 signal.signal(signal.SIGINT, signal_handler)
 
-class connection(object):
+class Connection(object):
+    """
+    Manages the ZeroMQ PUB socket for sending files.
+    """
     def __init__(self, port):
         self.port = port
         self.context = zmq.Context()
@@ -69,32 +72,32 @@ class connection(object):
             self.send(heartbeat)
             time.sleep(1)
 
+
 if __name__ == '__main__':
     # Access command-line arguments
     initialize_logger("zmq_pub")
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--port', help='Port number', type=int)
-    parser.add_argument('--heartbeatMode', action='store_true', help='Heartbeat mode')
-    parser.add_argument('--file_directory', help='File directory')
+    parser = argparse.ArgumentParser(description="File Publisher (Sender) for Semantic Comm Testbed")
+    parser.add_argument('--port', help='Port number to bind to (default: 5555)', type=int, default=5555)
+    parser.add_argument('--heartbeatMode', action='store_true', help='Run in heartbeat mode for testing connectivity')
+    parser.add_argument('--file_directory', help='Directory containing files to send', default='./sender_side_files')
     args = parser.parse_args()
-    if args.port:
-        port = args.port
-    else:
-        port = 5555
 
-    if args.file_directory:
-        file_directory = args.file_directory
-    else:
-        file_directory = './sender_side_files'
+    port = args.port
+    file_directory = args.file_directory
 
-    connection = connection(port)
+    conn = Connection(port)
 
     if args.heartbeatMode:
-        connection.heartbeatLoop()
+        conn.heartbeatLoop()
     else:
         file_transfer_unit = File_Transfer_Unit(file_directory)
-        file_transfer_unit.setConnection(connection)
-        connection.SetFileTransferUnit(file_transfer_unit)
+        file_transfer_unit.setConnection(conn)
+        conn.SetFileTransferUnit(file_transfer_unit)
+        
+        LOG("Starting file discovery...")
         file_transfer_unit.findFilesInDirectory()
-        time.sleep(1)
+        time.sleep(1) # Allow subscribers to connect/sync
+        
+        LOG("Starting transmission...")
         file_transfer_unit.sendAllFiles()
+

@@ -23,7 +23,10 @@ def signal_handler(sig, frame):
 
 signal.signal(signal.SIGINT, signal_handler)
 
-class connection(object):
+class Connection(object):
+    """
+    Manages the ZeroMQ SUB socket for receiving files.
+    """
     def __init__(self, port):
         self.subscription = b''
         self.port       = port
@@ -84,23 +87,23 @@ class connection(object):
         self.socket.close()
         self.context.term()
 
+
 if __name__ == '__main__':
     initialize_logger("zmq_sink")
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--port', help='Port number', type=int)
-    parser.add_argument('--file_directory', help='File directory')
+    parser = argparse.ArgumentParser(description="File Subscriber (Receiver) for Semantic Comm Testbed")
+    parser.add_argument('--port', help='Port number to connect to (default: 5555)', type=int, default=5555)
+    parser.add_argument('--file_directory', help='Directory to save received files (default: ./receiver_side_files)', default='./receiver_side_files')
     args = parser.parse_args()
-    if args.port:
-        port  = args.port
-    else:
-        port = 5555
     
-    if args.file_directory:
-        file_directory = args.file_directory
-    else:
-        file_directory = './receiver_side_files'
+    port  = args.port
+    file_directory = args.file_directory
+
+    LOG(f"Initializing Receiver for port {port} saving to {file_directory}")
+
     fileTransferUnit = File_Transfer_Unit(file_directory)
-    connection = connection(port)
-    fileTransferUnit.setConnection(connection)
-    connection.setFileTransferUnit(fileTransferUnit)
-    connection.recvLoop()
+    conn = Connection(port)
+    fileTransferUnit.setConnection(conn)
+    conn.setFileTransferUnit(fileTransferUnit)
+    
+    conn.recvLoop()
+
